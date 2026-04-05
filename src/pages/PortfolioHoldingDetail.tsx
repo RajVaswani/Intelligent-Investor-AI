@@ -168,7 +168,7 @@ export default function PortfolioHoldingDetail() {
           symbol={symbol}
           yahooSymbol={yahooSymbol}
           height={500}
-          refreshInterval={30000}
+          refreshInterval={1000}
         />
 
         {/* P&L Detail Card */}
