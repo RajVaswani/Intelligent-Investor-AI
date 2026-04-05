@@ -5,6 +5,8 @@ import { SymbolSearch } from "@/components/options/SymbolSearch";
 import { LivePredictions } from "@/components/options/LivePredictions";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
 import { fetchIntradayData, type IntradayData } from "@/lib/api/optionsData";
+import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
+import type { AnalysisResult } from "@/lib/stockData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Activity } from "lucide-react";
 
@@ -14,12 +16,17 @@ export default function OptionsTrading() {
   const symbol = searchParams.get("symbol") || "AAPL";
   const [loading, setLoading] = useState(false);
   const [intradayData, setIntradayData] = useState<IntradayData | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
 
   const loadData = useCallback(async (sym: string) => {
     setLoading(true);
     try {
-      const intraday = await fetchIntradayData(sym);
+      const [intraday, cached] = await Promise.all([
+        fetchIntradayData(sym),
+        getCachedAnalysis(sym),
+      ]);
       setIntradayData(intraday);
+      setAnalysis(cached);
       if (!intraday) toast({ title: "No data", description: `Could not load data for ${sym}`, variant: "destructive" });
     } catch {
       toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
@@ -67,10 +74,8 @@ export default function OptionsTrading() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* TradingView chart — full width */}
             <TradingViewChart symbol={tvSymbol} height={1000} interval="1" />
-            {/* Live signals below */}
-            <LivePredictions data={intradayData} symbol={symbol} />
+            <LivePredictions data={intradayData} symbol={symbol} analysis={analysis} />
           </div>
         )}
       </div>
