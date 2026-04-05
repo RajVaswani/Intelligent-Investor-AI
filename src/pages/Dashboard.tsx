@@ -100,10 +100,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadHoldings();
-    supabase.from("profiles").select("ibkr_flex_token, ibkr_query_id").eq("id", user?.id).single().then(({ data }) => {
-      if (data?.ibkr_flex_token) setIbkrToken(data.ibkr_flex_token);
-      if (data?.ibkr_query_id) setIbkrQueryId(data.ibkr_query_id);
-    });
+    // Secrets are write-only from client; we check if they exist via edge function
   }, [user, loadHoldings]);
 
   // Load cached analyses for holdings
