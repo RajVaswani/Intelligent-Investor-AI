@@ -13,19 +13,40 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, queryId, userId, step, referenceCode } = await req.json();
+    const { userId, step, referenceCode } = await req.json();
 
-    if (!token || !userId) {
-      return new Response(JSON.stringify({ success: false, error: "Missing token or userId" }), {
+    if (!userId) {
+      return new Response(JSON.stringify({ success: false, error: "Missing userId" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Read IBKR credentials server-side from user_secrets (service role)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: secrets, error: secretsErr } = await supabase
+      .from("user_secrets")
+      .select("ibkr_flex_token, ibkr_query_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (secretsErr || !secrets?.ibkr_flex_token) {
+      return new Response(JSON.stringify({ success: false, error: "IBKR credentials not configured. Go to Settings to save them." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = secrets.ibkr_flex_token;
+    const queryId = secrets.ibkr_query_id;
+
     // STEP 1: Request the flex report and return reference code
     if (step === "request" || (!step && !referenceCode)) {
       if (!queryId) {
-        return new Response(JSON.stringify({ success: false, error: "Missing queryId" }), {
+        return new Response(JSON.stringify({ success: false, error: "Missing queryId in saved credentials" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -80,7 +101,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check for errors
       const errorMatch = reportXml.match(/<ErrorMessage>([^<]+)<\/ErrorMessage>/);
       if (errorMatch) {
         return new Response(JSON.stringify({
@@ -94,11 +114,6 @@ Deno.serve(async (req) => {
 
       // Parse positions
       const positions = parsePositions(reportXml);
-
-      // Upsert into user_portfolios
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
 
       for (const pos of positions) {
         await supabase.from("user_portfolios").upsert({
