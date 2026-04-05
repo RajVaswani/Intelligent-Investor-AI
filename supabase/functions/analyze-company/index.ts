@@ -4,6 +4,35 @@ const corsHeaders = {
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
+async function firecrawlSearch(apiKey: string, query: string, limit: number): Promise<{ text: string; results: any[] }> {
+  try {
+    const res = await fetch('https://api.firecrawl.dev/v1/search', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, limit }),
+    })
+    const json = await res.json()
+    const results = json?.data || json?.results || []
+    const text = results.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
+    return { text: text.substring(0, 3500), results }
+  } catch (e) {
+    console.error(`Search failed for: ${query}`, e)
+    return { text: '', results: [] }
+  }
+}
+
+function extractCitations(results: any[]): Array<{ title: string; url: string; source: string }> {
+  return results
+    .filter((r: any) => r.url && r.title)
+    .map((r: any) => {
+      try {
+        const domain = new URL(r.url).hostname.replace('www.', '')
+        return { title: r.title, url: r.url, source: domain }
+      } catch { return null }
+    })
+    .filter(Boolean) as any[]
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -20,24 +49,18 @@ Deno.serve(async (req) => {
     }
 
     const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY')
-    if (!firecrawlKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
-    if (!lovableApiKey) {
+    if (!firecrawlKey || !lovableApiKey) {
       return new Response(
-        JSON.stringify({ success: false, error: 'LOVABLE_API_KEY not configured' }),
+        JSON.stringify({ success: false, error: 'API keys not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Analyzing ${symbol} (${name})...`)
+    const region = etf === 'nifty50' ? 'India' : 'United States'
+    const currency = etf === 'nifty50' ? 'INR' : 'USD'
+    console.log(`Full macro+micro analysis for ${symbol} (${name})...`)
 
-    // Collect all citations
     const citations: Array<{ title: string; url: string; source: string }> = []
 
     // Step 1: Scrape company website
@@ -49,133 +72,104 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ url: website, formats: ['markdown'], onlyMainContent: true }),
       })
       const scrapeJson = await scrapeRes.json()
-      websiteData = scrapeJson?.data?.markdown || scrapeJson?.markdown || 'No data scraped'
-      websiteData = websiteData.substring(0, 4000)
+      websiteData = (scrapeJson?.data?.markdown || scrapeJson?.markdown || 'No data').substring(0, 4000)
       citations.push({ title: `${name} Official Website`, url: website, source: 'Company Website' })
     } catch (e) {
       console.error('Website scrape failed:', e)
-      websiteData = 'Failed to scrape website'
+      websiteData = 'Failed to scrape'
     }
 
-    // Step 2: Search for news and quarterly reports
-    let newsData = ''
-    let newsResults: any[] = []
-    try {
-      const searchRes = await fetch('https://api.firecrawl.dev/v1/search', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `${name} ${symbol} quarterly results earnings financial performance 2025 2026`,
-          limit: 8,
-          tbs: 'qdr:m',
-        }),
-      })
-      const searchJson = await searchRes.json()
-      newsResults = searchJson?.data || searchJson?.results || []
-      newsData = newsResults.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
-      newsData = newsData.substring(0, 4000)
-      newsResults.forEach((r: any) => {
-        if (r.url && r.title) {
-          const domain = new URL(r.url).hostname.replace('www.', '')
-          citations.push({ title: r.title, url: r.url, source: domain })
-        }
-      })
-    } catch (e) {
-      console.error('News search failed:', e)
-      newsData = 'Failed to fetch news'
-    }
+    // Step 2-8: Parallel searches — micro AND macro
+    const [
+      newsSearch,
+      financialSearch,
+      reportSearch,
+      geopoliticalSearch,
+      controversySearch,
+      macroEconSearch,
+      sectorSearch,
+      regionalSearch,
+    ] = await Promise.all([
+      // MICRO
+      firecrawlSearch(firecrawlKey, `${name} ${symbol} quarterly results earnings financial performance 2025 2026`, 8),
+      firecrawlSearch(firecrawlKey, `${name} stock analysis outlook site:bloomberg.com OR site:reuters.com OR site:cnbc.com OR site:moneycontrol.com`, 5),
+      firecrawlSearch(firecrawlKey, `${name} annual report investor presentation Q4 Q1 2025 2026 revenue profit margin`, 4),
+      // MACRO
+      firecrawlSearch(firecrawlKey, `${sector} sector ${region} geopolitical risk war sanctions trade policy tariff impact 2025 2026`, 5),
+      firecrawlSearch(firecrawlKey, `${name} ${symbol} scandal controversy scam bribe corruption lawsuit fraud investigation legal`, 5),
+      firecrawlSearch(firecrawlKey, `${region} economy interest rates inflation GDP currency ${currency} central bank monetary policy impact stock market 2026`, 5),
+      firecrawlSearch(firecrawlKey, `${sector} sector outlook headwinds tailwinds disruption AI regulation competition ${region} 2026`, 4),
+      firecrawlSearch(firecrawlKey, `${name} ${symbol} insider trading fake news media manipulation pump dump retail institutional sentiment ${region}`, 4),
+    ])
 
-    // Step 3: Search Bloomberg/Reuters/CNBC
-    let financialNews = ''
-    try {
-      const finRes = await fetch('https://api.firecrawl.dev/v1/search', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `${name} stock analysis outlook earnings site:bloomberg.com OR site:reuters.com OR site:cnbc.com OR site:moneycontrol.com`,
-          limit: 5,
-        }),
-      })
-      const finJson = await finRes.json()
-      const finResults = finJson?.data || finJson?.results || []
-      financialNews = finResults.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
-      financialNews = financialNews.substring(0, 3000)
-      finResults.forEach((r: any) => {
-        if (r.url && r.title) {
-          const domain = new URL(r.url).hostname.replace('www.', '')
-          citations.push({ title: r.title, url: r.url, source: domain })
-        }
-      })
-    } catch (e) {
-      console.error('Financial news search failed:', e)
-      financialNews = 'Failed to fetch financial news'
-    }
+    // Collect all citations
+    ;[newsSearch, financialSearch, reportSearch, geopoliticalSearch, controversySearch, macroEconSearch, sectorSearch, regionalSearch]
+      .forEach(s => citations.push(...extractCitations(s.results)))
 
-    // Step 4: Search for annual/quarterly reports
-    let reportData = ''
-    try {
-      const reportRes = await fetch('https://api.firecrawl.dev/v1/search', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `${name} annual report investor presentation Q4 Q1 2025 2026 revenue profit margin`,
-          limit: 4,
-        }),
-      })
-      const reportJson = await reportRes.json()
-      const reportResults = reportJson?.data || reportJson?.results || []
-      reportData = reportResults.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
-      reportData = reportData.substring(0, 2000)
-      reportResults.forEach((r: any) => {
-        if (r.url && r.title) {
-          const domain = new URL(r.url).hostname.replace('www.', '')
-          citations.push({ title: r.title, url: r.url, source: domain })
-        }
-      })
-    } catch (e) {
-      console.error('Report search failed:', e)
-      reportData = 'No report data found'
-    }
-
-    // Step 5: AI Analysis
-    const aiPrompt = `You are a senior equity research analyst at a top investment bank. Provide an extremely detailed and comprehensive analysis.
+    // Step 9: AI Analysis with comprehensive prompt
+    const aiPrompt = `You are a senior equity research analyst AND geopolitical risk analyst at a top global investment bank. Provide an EXTREMELY comprehensive analysis covering BOTH micro fundamentals AND macro forces.
 
 Company: ${name} (${symbol})
 Sector: ${sector}
+Region: ${region} (${currency})
 ETF: ${etf === 'nifty50' ? 'Nifty 50 (India)' : 'S&P 500 (US)'}
 
 === COMPANY WEBSITE DATA ===
 ${websiteData}
 
 === RECENT NEWS & QUARTERLY RESULTS ===
-${newsData}
+${newsSearch.text}
 
 === FINANCIAL NEWS (Bloomberg/Reuters/CNBC) ===
-${financialNews}
+${financialSearch.text}
 
 === ANNUAL/QUARTERLY REPORTS ===
-${reportData}
+${reportSearch.text}
+
+=== GEOPOLITICAL & TRADE POLICY CONTEXT ===
+${geopoliticalSearch.text}
+
+=== CONTROVERSIES, SCAMS, LEGAL ISSUES ===
+${controversySearch.text}
+
+=== MACRO-ECONOMIC FACTORS ===
+${macroEconSearch.text}
+
+=== SECTOR TAILWINDS & HEADWINDS ===
+${sectorSearch.text}
+
+=== MEDIA SENTIMENT & MANIPULATION SIGNALS ===
+${regionalSearch.text}
 
 Respond with this JSON structure ONLY:
 {
-  "overallScore": <number 0-100, be precise based on evidence>,
+  "overallScore": <number 0-100>,
   "sentiment": "<bullish|bearish|neutral>",
-  "summary": "<3-4 sentence executive summary with specific numbers and data points>",
-  "websiteInsights": "<detailed analysis of company's digital presence, products, strategy based on their website, 3-4 sentences>",
-  "financialHighlights": "<detailed financial analysis with specific revenue, profit, margin numbers from quarterly reports, 4-5 sentences>",
-  "newsDigest": "<comprehensive summary of all recent news, analyst opinions, market reactions, 4-5 sentences>",
-  "detailedAnalysis": "<8-10 sentence deep-dive covering valuation, growth drivers, competitive moat, market positioning, capital allocation, sector trends>",
-  "competitivePosition": "<4-5 sentences on competitive advantages, market share, peer comparison, barriers to entry>",
-  "managementOutlook": "<3-4 sentences on management quality, strategic direction, guidance, capital deployment>",
-  "strengths": ["<specific strength with data>", "<strength 2>", "<strength 3>", "<strength 4>", "<strength 5>"],
-  "risks": ["<specific risk with context>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>"],
-  "priceTarget1w": <predicted price in 1 week as number>,
-  "priceTarget1m": <predicted price in 1 month as number>,
-  "priceTarget3m": <predicted price in 3 months as number>,
-  "priceTarget1y": <predicted price in 1 year as number>,
+  "summary": "<4-5 sentence executive summary covering BOTH company fundamentals AND macro environment with specific numbers>",
+
+  "websiteInsights": "<3-4 sentences on company digital presence, products, strategy from website>",
+  "financialHighlights": "<5-6 sentences with specific revenue, profit, margin, growth numbers from quarterly/annual reports>",
+  "newsDigest": "<5-6 sentences on all recent news, analyst opinions, market reactions, upgrades/downgrades>",
+  "detailedAnalysis": "<10-12 sentences: valuation, growth drivers, competitive moat, market positioning, capital allocation, sector trends>",
+  "competitivePosition": "<5-6 sentences on competitive advantages, market share, peer comparison, barriers to entry, disruption threats>",
+  "managementOutlook": "<4-5 sentences on management quality, strategic direction, guidance, capital deployment, track record>",
+
+  "geopoliticalAnalysis": "<6-8 sentences: how current wars, sanctions, trade policies, tariffs, diplomatic tensions affect this company and sector. Be specific about which geopolitical events matter and quantify impact where possible>",
+  "controversyScanner": "<6-8 sentences: any scandals, scams, bribes, corruption cases, lawsuits, fraud investigations, murders/crimes linked to management, regulatory penalties, whistleblower complaints. If none found, explain the company's governance track record. Be brutally honest>",
+  "macroEconomicFactors": "<6-8 sentences: how interest rates, inflation, GDP growth, currency movements, central bank policy, government spending affect this stock. Include specific numbers like rate levels, inflation %, GDP growth %>",
+  "sectorTailwindsHeadwinds": "<5-6 sentences: industry-level forces - AI disruption, regulation changes, supply chain shifts, demographic trends, ESG pressures, technology obsolescence>",
+  "regionalSentiment": "<5-6 sentences: region-specific buy/sell dynamics - retail vs institutional flows, FII/DII activity (for India), political climate impact on markets, election cycle effects, cultural factors driving stock price>",
+  "mediaManipulationCheck": "<5-6 sentences: assessment of fake news risk, social media pump-and-dump signals, media bias in coverage, paid news vs genuine analysis, anomalous trading patterns suggesting manipulation>",
+
+  "strengths": ["<strength 1 with data>", "<strength 2>", "<strength 3>", "<strength 4>", "<strength 5>", "<strength 6>"],
+  "risks": ["<risk 1 with data>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>", "<risk 6>"],
+  "priceTarget1w": <predicted price 1 week>,
+  "priceTarget1m": <predicted price 1 month>,
+  "priceTarget3m": <predicted price 3 months>,
+  "priceTarget1y": <predicted price 1 year>,
   "recommendation": "<buy|hold|sell>",
-  "confidenceScore": <0-100 confidence in prediction>,
-  "predictionReasoning": "<4-5 sentences explaining the prediction rationale, citing specific catalysts, valuation metrics, and growth trajectory>"
+  "confidenceScore": <0-100>,
+  "predictionReasoning": "<6-8 sentences: explain prediction rationale incorporating BOTH micro fundamentals AND macro forces. Cite specific catalysts, risks, valuation metrics, geopolitical factors, and macro trends that drive the price targets>"
 }`
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -185,9 +179,9 @@ Respond with this JSON structure ONLY:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: 'You are a senior equity research analyst. Respond ONLY with valid JSON. No markdown, no code blocks. Be extremely detailed and cite specific numbers.' },
+          { role: 'system', content: 'You are a senior equity research and geopolitical risk analyst. Respond ONLY with valid JSON. No markdown, no code blocks. Be extremely detailed, cite specific numbers, and be brutally honest about risks including controversies.' },
           { role: 'user', content: aiPrompt },
         ],
         response_format: { type: 'json_object' },
@@ -197,10 +191,16 @@ Respond with this JSON structure ONLY:
     if (!aiRes.ok) {
       const errText = await aiRes.text()
       console.error('AI API error:', errText)
-      return new Response(
-        JSON.stringify({ success: false, error: `AI analysis failed: ${aiRes.status}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (aiRes.status === 429) {
+        return new Response(JSON.stringify({ success: false, error: 'Rate limited — please try again in a minute' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      if (aiRes.status === 402) {
+        return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ success: false, error: `AI analysis failed: ${aiRes.status}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const aiJson = await aiRes.json()
@@ -210,16 +210,11 @@ Respond with this JSON structure ONLY:
       analysis = JSON.parse(analysisText)
     } catch {
       console.error('Failed to parse AI response:', analysisText)
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to parse AI analysis' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ success: false, error: 'Failed to parse AI analysis' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Deduplicate citations
-    const uniqueCitations = citations.filter((c, i, arr) =>
-      arr.findIndex((x) => x.url === c.url) === i
-    )
+    const uniqueCitations = citations.filter((c, i, arr) => arr.findIndex((x) => x.url === c.url) === i)
 
     // Store in database
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -229,10 +224,7 @@ Respond with this JSON structure ONLY:
     const { error: dbError } = await supabase
       .from('stock_analyses')
       .upsert({
-        symbol,
-        etf,
-        company_name: name,
-        sector,
+        symbol, etf, company_name: name, sector,
         overall_score: analysis.overallScore || 50,
         sentiment: analysis.sentiment || 'neutral',
         summary: analysis.summary || '',
@@ -248,6 +240,12 @@ Respond with this JSON structure ONLY:
         recommendation: analysis.recommendation || null,
         confidence_score: analysis.confidenceScore || null,
         prediction_reasoning: analysis.predictionReasoning || null,
+        geopolitical_analysis: analysis.geopoliticalAnalysis || null,
+        controversy_scanner: analysis.controversyScanner || null,
+        macro_economic_factors: analysis.macroEconomicFactors || null,
+        sector_tailwinds_headwinds: analysis.sectorTailwindsHeadwinds || null,
+        regional_sentiment: analysis.regionalSentiment || null,
+        media_manipulation_check: analysis.mediaManipulationCheck || null,
         raw_scraped_data: {
           detailedAnalysis: analysis.detailedAnalysis || '',
           competitivePosition: analysis.competitivePosition || '',
@@ -256,22 +254,12 @@ Respond with this JSON structure ONLY:
         },
       }, { onConflict: 'symbol,etf' })
 
-    if (dbError) {
-      console.error('DB error:', dbError)
-    }
+    if (dbError) console.error('DB error:', dbError)
 
     return new Response(
       JSON.stringify({
         success: true,
-        data: {
-          ...analysis,
-          citations: uniqueCitations,
-          symbol,
-          etf,
-          company_name: name,
-          sector,
-          lastUpdated: new Date().toISOString(),
-        },
+        data: { ...analysis, citations: uniqueCitations, symbol, etf, company_name: name, sector, lastUpdated: new Date().toISOString() },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
