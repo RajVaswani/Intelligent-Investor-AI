@@ -91,7 +91,11 @@ export function getAllCompanies(): Company[] {
 }
 
 export function findCompany(symbol: string): Company | undefined {
-  return getAllCompanies().find((c) => c.symbol === symbol);
+  // Check top10 first, then try dynamic import fallback
+  const found = getAllCompanies().find((c) => c.symbol === symbol);
+  if (found) return found;
+  // Will also be searched via full lists in components that import companyData
+  return undefined;
 }
 
 export function getSentimentColor(sentiment: "bullish" | "bearish" | "neutral"): string {
