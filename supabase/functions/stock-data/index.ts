@@ -10,9 +10,20 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url)
-    const symbol = url.searchParams.get('symbol')
-    const range = url.searchParams.get('range') || '1d' // 1d, 5d, 1mo, 3mo, 6mo, 1y, 5y
-    const interval = url.searchParams.get('interval') || '5m' // 1m, 5m, 15m, 1h, 1d
+    let symbol: string | null = null
+    let range = '1d'
+    let interval = '5m'
+
+    if (req.method === 'GET') {
+      symbol = url.searchParams.get('symbol')
+      range = url.searchParams.get('range') || '1d'
+      interval = url.searchParams.get('interval') || '5m'
+    } else {
+      const body = await req.json()
+      symbol = body.symbol
+      range = body.range || '1d'
+      interval = body.interval || '5m'
+    }
 
     if (!symbol) {
       return new Response(
