@@ -49,61 +49,83 @@ export default function Dashboard() {
   const [newHolding, setNewHolding] = useState({ symbol: "", company_name: "", quantity: "", avg_price: "", sector: "", exchange: "" });
 
   // Load holdings
-  useEffect(() => {
+  const loadHoldings = useCallback(async () => {
     if (!user) return;
-    supabase.from("user_portfolios").select("*").eq("user_id", user.id).then(({ data }) => {
-      if (data) setHoldings(data as PortfolioHolding[]);
+    const { data } = await supabase.from("user_portfolios").select("*").eq("user_id", user.id);
+    if (data) setHoldings(data as PortfolioHolding[]);
+  }, [user]);
+
+  const loadAnalyses = useCallback(async () => {
+    if (holdings.length === 0) return;
+    const symbols = holdings.map((h) => h.symbol);
+    const { data } = await supabase.from("stock_analyses").select("*").in("symbol", symbols);
+    if (!data) return;
+    const map: Record<string, AnalysisResult> = {};
+    data.forEach((row: any) => {
+      const raw = row.raw_scraped_data || {};
+      map[row.symbol] = {
+        id: row.id,
+        company: { symbol: row.symbol, name: row.company_name, sector: row.sector, website: "", etf: row.etf, tradingViewSymbol: "" },
+        overallScore: row.overall_score,
+        sentiment: row.sentiment,
+        summary: row.summary,
+        websiteInsights: row.website_insights || "",
+        financialHighlights: row.financial_highlights || "",
+        newsDigest: row.news_digest || "",
+        detailedAnalysis: raw.detailedAnalysis || "",
+        competitivePosition: raw.competitivePosition || "",
+        managementOutlook: raw.managementOutlook || "",
+        strengths: row.strengths || [],
+        risks: row.risks || [],
+        citations: raw.citations || [],
+        lastUpdated: row.updated_at,
+        prediction: {
+          priceTarget1w: row.price_target_1w, priceTarget1m: row.price_target_1m,
+          priceTarget3m: row.price_target_3m, priceTarget1y: row.price_target_1y,
+          recommendation: row.recommendation, confidenceScore: row.confidence_score,
+          predictionReasoning: row.prediction_reasoning || "",
+        },
+        macro: {
+          geopoliticalAnalysis: row.geopolitical_analysis || "",
+          controversyScanner: row.controversy_scanner || "",
+          macroEconomicFactors: row.macro_economic_factors || "",
+          sectorTailwindsHeadwinds: row.sector_tailwinds_headwinds || "",
+          regionalSentiment: row.regional_sentiment || "",
+          mediaManipulationCheck: row.media_manipulation_check || "",
+        },
+      };
     });
-    supabase.from("profiles").select("ibkr_flex_token, ibkr_query_id").eq("id", user.id).single().then(({ data }) => {
+    setAnalyses(map);
+  }, [holdings]);
+
+  useEffect(() => {
+    loadHoldings();
+    supabase.from("profiles").select("ibkr_flex_token, ibkr_query_id").eq("id", user?.id).single().then(({ data }) => {
       if (data?.ibkr_flex_token) setIbkrToken(data.ibkr_flex_token);
       if (data?.ibkr_query_id) setIbkrQueryId(data.ibkr_query_id);
     });
-  }, [user]);
+  }, [user, loadHoldings]);
 
   // Load cached analyses for holdings
+  useEffect(() => { loadAnalyses(); }, [loadAnalyses]);
+
+  // Auto-sync IBKR every 30 seconds (if credentials configured)
+  useEffect(() => {
+    if (!ibkrToken || !ibkrQueryId || !user) return;
+    const interval = setInterval(() => {
+      loadHoldings();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [ibkrToken, ibkrQueryId, user, loadHoldings]);
+
+  // Auto-refresh analyses every 30 seconds
   useEffect(() => {
     if (holdings.length === 0) return;
-    const symbols = holdings.map((h) => h.symbol);
-    supabase.from("stock_analyses").select("*").in("symbol", symbols).then(({ data }) => {
-      if (!data) return;
-      const map: Record<string, AnalysisResult> = {};
-      data.forEach((row: any) => {
-        const raw = row.raw_scraped_data || {};
-        map[row.symbol] = {
-          id: row.id,
-          company: { symbol: row.symbol, name: row.company_name, sector: row.sector, website: "", etf: row.etf, tradingViewSymbol: "" },
-          overallScore: row.overall_score,
-          sentiment: row.sentiment,
-          summary: row.summary,
-          websiteInsights: row.website_insights || "",
-          financialHighlights: row.financial_highlights || "",
-          newsDigest: row.news_digest || "",
-          detailedAnalysis: raw.detailedAnalysis || "",
-          competitivePosition: raw.competitivePosition || "",
-          managementOutlook: raw.managementOutlook || "",
-          strengths: row.strengths || [],
-          risks: row.risks || [],
-          citations: raw.citations || [],
-          lastUpdated: row.updated_at,
-          prediction: {
-            priceTarget1w: row.price_target_1w, priceTarget1m: row.price_target_1m,
-            priceTarget3m: row.price_target_3m, priceTarget1y: row.price_target_1y,
-            recommendation: row.recommendation, confidenceScore: row.confidence_score,
-            predictionReasoning: row.prediction_reasoning || "",
-          },
-          macro: {
-            geopoliticalAnalysis: row.geopolitical_analysis || "",
-            controversyScanner: row.controversy_scanner || "",
-            macroEconomicFactors: row.macro_economic_factors || "",
-            sectorTailwindsHeadwinds: row.sector_tailwinds_headwinds || "",
-            regionalSentiment: row.regional_sentiment || "",
-            mediaManipulationCheck: row.media_manipulation_check || "",
-          },
-        };
-      });
-      setAnalyses(map);
-    });
-  }, [holdings]);
+    const interval = setInterval(() => {
+      loadAnalyses();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [holdings, loadAnalyses]);
 
   const addHolding = async () => {
     if (!user || !newHolding.symbol || !newHolding.company_name) return;
