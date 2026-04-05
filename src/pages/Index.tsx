@@ -5,15 +5,14 @@ import { ETFTabs } from "@/components/dashboard/ETFTabs";
 import { CompanyCard } from "@/components/dashboard/CompanyCard";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { SectorAnalysis } from "@/components/dashboard/SectorAnalysis";
-import { TradingViewChart } from "@/components/charts/TradingViewChart";
-import { TradingViewTicker } from "@/components/charts/TradingViewChart";
+import { RealTimeChart } from "@/components/charts/RealTimeChart";
 import { type ETFType, type Company, type AnalysisResult, getCompanies } from "@/lib/stockData";
 import { analyzeCompany as analyzeCompanyAPI, getCachedAnalyses } from "@/lib/api/stockAnalysis";
 import { useToast } from "@/hooks/use-toast";
 
-const ETF_CHART_SYMBOLS: Record<ETFType, string> = {
-  nifty50: "NSE:NIFTY",
-  spy: "AMEX:SPY",
+const ETF_CHART: Record<ETFType, { symbol: string; yahoo: string }> = {
+  nifty50: { symbol: "NIFTY 50", yahoo: "^NSEI" },
+  spy: { symbol: "SPY", yahoo: "SPY" },
 };
 
 export default function Index() {
@@ -28,11 +27,6 @@ export default function Index() {
   const currentAnalyses = companies
     .map((c) => analyses[c.symbol])
     .filter(Boolean) as AnalysisResult[];
-
-  const tickerSymbols = companies.slice(0, 6).map((c) => ({
-    proName: c.tradingViewSymbol,
-    title: c.symbol,
-  }));
 
   useEffect(() => {
     getCachedAnalyses(activeETF).then((cached) => {
@@ -74,32 +68,31 @@ export default function Index() {
     setIsRefreshingAll(false);
   }, [companies, analyzeCompany]);
 
+  const etfChart = ETF_CHART[activeETF];
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header onRefreshAll={refreshAll} isRefreshing={isRefreshingAll} />
 
-      {/* Ticker Tape */}
-      <div className="border-b border-border">
-        <TradingViewTicker symbols={tickerSymbols} />
-      </div>
-
       <main className="flex-1 p-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          {/* ETF Selector */}
           <div className="flex items-center justify-between">
             <ETFTabs activeETF={activeETF} onTabChange={setActiveETF} />
             <p className="text-xs text-muted-foreground">Top 10 constituents by weight</p>
           </div>
 
-          {/* ETF Index Chart */}
-          <TradingViewChart symbol={ETF_CHART_SYMBOLS[activeETF]} height={500} />
+          {/* Real-time ETF Chart */}
+          <RealTimeChart
+            key={etfChart.yahoo}
+            symbol={etfChart.symbol}
+            yahooSymbol={etfChart.yahoo}
+            height={500}
+            refreshInterval={30000}
+          />
 
-          {/* Stats */}
           <StatsBar analyses={currentAnalyses} />
 
-          {/* Main Grid: Companies + Sector Analysis */}
           <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-            {/* Company Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {companies.map((company) => (
                 <CompanyCard
@@ -113,7 +106,6 @@ export default function Index() {
               ))}
             </div>
 
-            {/* Sector Analysis Sidebar */}
             <div className="space-y-4">
               <SectorAnalysis analyses={currentAnalyses} etf={activeETF} />
             </div>
