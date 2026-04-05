@@ -109,7 +109,7 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
 
   // Generate projection chart data
   const projectionData = useMemo((): ProjectionPoint[] => {
-    const _months = parseInt(timeHorizon) || 12;
+    const months = parseInt(timeHorizon) || 12;
     const monthly = parseFloat(monthlyInvestment) || 0;
 
     // Calculate weighted avg growth rate from AI predictions
