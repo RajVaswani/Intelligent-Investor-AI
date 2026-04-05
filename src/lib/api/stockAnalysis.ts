@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Company, AnalysisResult } from "@/lib/stockData";
+import type { Company, AnalysisResult, MacroAnalysis } from "@/lib/stockData";
+
+function extractMacro(row: any): MacroAnalysis {
+  return {
+    geopoliticalAnalysis: row.geopolitical_analysis || row.geopoliticalAnalysis || "",
+    controversyScanner: row.controversy_scanner || row.controversyScanner || "",
+    macroEconomicFactors: row.macro_economic_factors || row.macroEconomicFactors || "",
+    sectorTailwindsHeadwinds: row.sector_tailwinds_headwinds || row.sectorTailwindsHeadwinds || "",
+    regionalSentiment: row.regional_sentiment || row.regionalSentiment || "",
+    mediaManipulationCheck: row.media_manipulation_check || row.mediaManipulationCheck || "",
+  };
+}
 
 export async function analyzeCompany(company: Company): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-company", {
@@ -41,6 +52,7 @@ export async function analyzeCompany(company: Company): Promise<AnalysisResult> 
       confidenceScore: d.confidenceScore || null,
       predictionReasoning: d.predictionReasoning || "",
     },
+    macro: extractMacro(d),
   };
 }
 
@@ -87,6 +99,7 @@ export async function getCachedAnalyses(etf: string): Promise<AnalysisResult[]> 
         confidenceScore: (row as any).confidence_score || null,
         predictionReasoning: (row as any).prediction_reasoning || "",
       },
+      macro: extractMacro(row),
     };
   });
 }
@@ -135,5 +148,6 @@ export async function getCachedAnalysis(symbol: string): Promise<AnalysisResult 
       confidenceScore: (data as any).confidence_score || null,
       predictionReasoning: (data as any).prediction_reasoning || "",
     },
+    macro: extractMacro(data),
   };
 }
