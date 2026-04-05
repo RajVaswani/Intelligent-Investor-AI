@@ -43,6 +43,13 @@ export function Header({ onRefreshAll, isRefreshing }: HeaderProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate("/options")}
+            className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80"
+          >
+            <TrendingUp className="h-4 w-4" />
+            Options
+          </button>
           {onRefreshAll && (
             <button
               onClick={onRefreshAll}
