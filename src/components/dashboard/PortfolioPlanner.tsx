@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Target, TrendingUp, AlertTriangle, DollarSign, Percent, ChevronDown, ChevronUp } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Legend, ReferenceLine } from "recharts";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Legend, ReferenceLine } from "recharts";
 import type { AnalysisResult } from "@/lib/stockData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PortfolioHolding {
   id: string;
@@ -28,35 +29,62 @@ interface ProjectionPoint {
   invested: number;
 }
 
-export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPlannerProps) {
+export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) {
   const [monthlyInvestment, setMonthlyInvestment] = useState("");
   const [targetROI, setTargetROI] = useState("");
   const [timeHorizon, setTimeHorizon] = useState("12");
   const [showPlanner, setShowPlanner] = useState(false);
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [_pricesLoading, setPricesLoading] = useState(false);
 
-  // Calculate P&L per holding using AI price targets
+  // Fetch live prices for all holdings
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    setPricesLoading(true);
+    const fetchPrices = async () => {
+      const prices: Record<string, number> = {};
+      await Promise.all(
+        holdings.map(async (h) => {
+          try {
+            const yahooSymbol = h.exchange === "NSE" ? `${h.symbol}.NS` : h.symbol;
+            const { data, error } = await supabase.functions.invoke("stock-data", {
+              body: { symbol: yahooSymbol, range: "1d", interval: "1d" },
+            });
+            if (!error && data?.success && data.data?.regularMarketPrice) {
+              prices[h.symbol] = data.data.regularMarketPrice;
+            }
+          } catch {
+            // skip failed fetches
+          }
+        })
+      );
+      setLivePrices(prices);
+      setPricesLoading(false);
+    };
+    fetchPrices();
+  }, [holdings]);
+
+  // Calculate P&L per holding using live market prices
   const holdingsPnL = useMemo(() => {
     return holdings.map((h) => {
       const analysis = analyses[h.symbol];
       const costBasis = h.quantity * h.avg_price;
-      const target1w = analysis?.prediction?.priceTarget1w;
-      const target1m = analysis?.prediction?.priceTarget1m;
       const target1y = analysis?.prediction?.priceTarget1y;
-      // Use 1-week target as nearest proxy; if unavailable, mark as no data
-      const hasEstimate = !!target1w;
-      const currentEstimate = target1w || h.avg_price;
-      const estimatedValue = h.quantity * currentEstimate;
-      const unrealizedPnL = hasEstimate ? estimatedValue - costBasis : 0;
-      const pnlPercent = hasEstimate && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
+      const livePrice = livePrices[h.symbol];
+      const hasLivePrice = !!livePrice;
+      const currentPrice = livePrice || h.avg_price;
+      const marketValue = h.quantity * currentPrice;
+      const unrealizedPnL = hasLivePrice ? marketValue - costBasis : 0;
+      const pnlPercent = hasLivePrice && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
       const projectedValue1y = target1y ? h.quantity * target1y : null;
       const projectedPnL1y = projectedValue1y ? projectedValue1y - costBasis : null;
 
       return {
         ...h,
         costBasis,
-        hasEstimate,
-        currentEstimate,
-        estimatedValue,
+        hasLivePrice,
+        currentPrice,
+        marketValue,
         unrealizedPnL,
         pnlPercent,
         projectedValue1y,
@@ -66,16 +94,16 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
         sentiment: analysis?.sentiment || null,
         topRisk: analysis?.risks?.[0] || null,
       };
-    }).sort((a, b) => b.estimatedValue - a.estimatedValue);
-  }, [holdings, analyses]);
+    }).sort((a, b) => b.marketValue - a.marketValue);
+  }, [holdings, analyses, livePrices]);
 
   // Portfolio-level P&L
   const portfolioPnL = useMemo(() => {
     const totalCost = holdingsPnL.reduce((s, h) => s + h.costBasis, 0);
-    const totalEstimated = holdingsPnL.reduce((s, h) => s + h.estimatedValue, 0);
+    const totalEstimated = holdingsPnL.reduce((s, h) => s + h.marketValue, 0);
     const totalUnrealized = totalEstimated - totalCost;
     const totalPnlPct = totalCost > 0 ? (totalUnrealized / totalCost) * 100 : 0;
-    const projected1y = holdingsPnL.reduce((s, h) => s + (h.projectedValue1y || h.estimatedValue), 0);
+    const projected1y = holdingsPnL.reduce((s, h) => s + (h.projectedValue1y || h.marketValue), 0);
     return { totalCost, totalEstimated, totalUnrealized, totalPnlPct, projected1y };
   }, [holdingsPnL]);
 
@@ -88,10 +116,10 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
     const analyzedHoldings = holdingsPnL.filter((h) => h.projectedValue1y !== null);
     let avgAnnualGrowth = 0.08; // default 8%
     if (analyzedHoldings.length > 0) {
-      const totalWeight = analyzedHoldings.reduce((s, h) => s + h.estimatedValue, 0);
+      const totalWeight = analyzedHoldings.reduce((s, h) => s + h.marketValue, 0);
       avgAnnualGrowth = analyzedHoldings.reduce((s, h) => {
-        const growth = h.projectedValue1y! / h.estimatedValue - 1;
-        const weight = h.estimatedValue / totalWeight;
+        const growth = h.projectedValue1y! / h.marketValue - 1;
+        const weight = h.marketValue / totalWeight;
         return s + growth * weight;
       }, 0);
     }
@@ -129,7 +157,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
   // ROI goal analysis
   const goalAnalysis = useMemo(() => {
     const targetPct = parseFloat(targetROI) || 0;
-    const months = parseInt(timeHorizon) || 12;
+    
     const targetValue = portfolioPnL.totalEstimated * (1 + targetPct / 100);
     const projectedEnd = projectionData[projectionData.length - 1];
     const onTrack = projectedEnd ? projectedEnd.base >= targetValue : false;
@@ -142,7 +170,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
         symbol: h.symbol,
         reason: h.recommendation === "sell" ? "AI recommends selling" : "Bearish sentiment",
         risk: h.topRisk,
-        impact: h.estimatedValue,
+        impact: h.marketValue,
       }));
 
     return { targetValue, onTrack, gap, threats };
@@ -159,7 +187,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
           <p className="text-xl font-bold text-foreground">{formatCurrency(portfolioPnL.totalCost)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Estimated Value</p>
+          <p className="text-xs text-muted-foreground">Market Value</p>
           <p className="text-xl font-bold text-foreground">{formatCurrency(portfolioPnL.totalEstimated)}</p>
         </div>
         <div className={`rounded-xl border p-4 ${portfolioPnL.totalUnrealized >= 0 ? "border-gain/20 bg-gain/5" : "border-loss/20 bg-loss/5"}`}>
@@ -191,7 +219,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
                 <th className="px-4 py-2 text-left font-medium">Symbol</th>
                 <th className="px-4 py-2 text-right font-medium">Qty</th>
                 <th className="px-4 py-2 text-right font-medium">Avg Cost</th>
-                <th className="px-4 py-2 text-right font-medium">AI Est. Price</th>
+                <th className="px-4 py-2 text-right font-medium">Live Price</th>
                 <th className="px-4 py-2 text-right font-medium">Value</th>
                 <th className="px-4 py-2 text-right font-medium">P&L</th>
                 <th className="px-4 py-2 text-right font-medium">P&L %</th>
@@ -207,13 +235,13 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
                   </td>
                   <td className="px-4 py-2.5 text-right text-foreground">{h.quantity}</td>
                   <td className="px-4 py-2.5 text-right text-foreground">${h.avg_price.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right text-foreground">{h.hasEstimate ? `$${h.currentEstimate.toFixed(2)}` : "—"}</td>
-                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{h.hasEstimate ? formatCurrency(h.estimatedValue) : "—"}</td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.hasEstimate ? `${h.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(h.unrealizedPnL)}` : "—"}
+                  <td className="px-4 py-2.5 text-right text-foreground">{h.hasLivePrice ? `$${h.currentPrice.toFixed(2)}` : "—"}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{h.hasLivePrice ? formatCurrency(h.marketValue) : "—"}</td>
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasLivePrice ? "text-muted-foreground" : h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasLivePrice ? `${h.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(h.unrealizedPnL)}` : "—"}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.hasEstimate ? `${h.pnlPercent >= 0 ? "+" : ""}${h.pnlPercent.toFixed(1)}%` : "—"}
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasLivePrice ? "text-muted-foreground" : h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasLivePrice ? `${h.pnlPercent >= 0 ? "+" : ""}${h.pnlPercent.toFixed(1)}%` : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     {h.recommendation && (
