@@ -25,7 +25,9 @@ export default function StockDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const company = symbol ? findCompany(symbol) : undefined;
+  const company = symbol
+    ? findCompany(symbol) || [...NIFTY50_FULL, ...SPY500_FULL].find((c) => c.symbol === symbol)
+    : undefined;
 
   useEffect(() => {
     if (!symbol) return;
