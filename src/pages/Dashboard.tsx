@@ -158,51 +158,42 @@ export default function Dashboard() {
     }
   };
 
-  const saveIbkrUrl = async () => {
+  const saveIbkrSettings = async () => {
     if (!user) return;
     setIbkrLoading(true);
-    const { error } = await supabase.from("profiles").update({ ibkr_gateway_url: ibkrUrl }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({
+      ibkr_flex_token: ibkrToken,
+      ibkr_query_id: ibkrQueryId,
+    }).eq("id", user.id);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "IBKR Gateway URL saved" });
+    else toast({ title: "IBKR credentials saved" });
     setIbkrLoading(false);
     setShowSettings(false);
   };
 
   const fetchIBKRPortfolio = async () => {
-    if (!ibkrUrl) {
-      toast({ title: "Configure IBKR first", description: "Go to Settings and enter your IBKR Client Portal Gateway URL", variant: "destructive" });
+    if (!ibkrToken || !ibkrQueryId) {
+      toast({ title: "Configure IBKR first", description: "Go to Settings and enter your Flex Query Token and Query ID", variant: "destructive" });
       return;
     }
-    toast({ title: "Fetching from IBKR...", description: "Connecting to your IBKR Client Portal Gateway" });
+    if (!user) return;
+    setIbkrSyncing(true);
+    toast({ title: "Fetching from IBKR...", description: "Requesting Flex Query report — this may take a moment" });
     try {
-      const res = await fetch(`${ibkrUrl}/v1/api/portfolio/accounts`);
-      if (!res.ok) throw new Error("Could not connect to IBKR Gateway");
-      const accounts = await res.json();
-      if (!accounts?.[0]?.accountId) throw new Error("No accounts found");
-      const accountId = accounts[0].accountId;
-      
-      const posRes = await fetch(`${ibkrUrl}/v1/api/portfolio/${accountId}/positions/0`);
-      if (!posRes.ok) throw new Error("Could not fetch positions");
-      const positions = await posRes.json();
-      
-      if (!user) return;
-      for (const pos of positions) {
-        await supabase.from("user_portfolios").upsert({
-          user_id: user.id,
-          symbol: pos.ticker || pos.contractDesc,
-          company_name: pos.contractDesc || pos.ticker,
-          quantity: pos.position || 0,
-          avg_price: pos.avgCost || 0,
-          sector: pos.assetClass || null,
-          exchange: pos.listingExchange || null,
-          currency: pos.currency || "USD",
-        }, { onConflict: "user_id,symbol" });
-      }
-      const { data } = await supabase.from("user_portfolios").select("*").eq("user_id", user.id);
-      if (data) setHoldings(data as PortfolioHolding[]);
-      toast({ title: "Portfolio synced!", description: `Imported ${positions.length} positions from IBKR` });
+      const { data, error } = await supabase.functions.invoke("ibkr-portfolio", {
+        body: { token: ibkrToken, queryId: ibkrQueryId, userId: user.id },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Failed to fetch portfolio");
+
+      // Reload holdings
+      const { data: holdings } = await supabase.from("user_portfolios").select("*").eq("user_id", user.id);
+      if (holdings) setHoldings(holdings as PortfolioHolding[]);
+      toast({ title: "Portfolio synced!", description: `Imported ${data.data.positionsCount} positions from IBKR` });
     } catch (err: any) {
-      toast({ title: "IBKR Connection Failed", description: err.message + ". Make sure IB Gateway is running and accessible.", variant: "destructive" });
+      toast({ title: "IBKR Sync Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIbkrSyncing(false);
     }
   };
 
