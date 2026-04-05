@@ -6,6 +6,7 @@ import type { AnalysisResult, Company } from "@/lib/stockData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
 import { RealTimeChart } from "@/components/charts/RealTimeChart";
 import { ScoreBadge } from "@/components/dashboard/ScoreBadge";
+import { StockChat } from "@/components/dashboard/StockChat";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
