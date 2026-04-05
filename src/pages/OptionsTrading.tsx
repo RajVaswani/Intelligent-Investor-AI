@@ -49,7 +49,9 @@ export default function OptionsTrading() {
     return () => clearInterval(interval);
   }, [symbol]);
 
-  const tvSymbol = symbol.includes(".") ? symbol : `NASDAQ:${symbol}`;
+  const allCompanies = [...NIFTY50_FULL, ...SPY500_FULL];
+  const company = allCompanies.find((c) => c.symbol === symbol);
+  const tvSymbol = company?.tradingViewSymbol || (symbol.includes(".") ? symbol : `NASDAQ:${symbol}`);
 
   return (
     <div className="min-h-screen bg-background">
