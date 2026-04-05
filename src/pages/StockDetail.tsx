@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, RefreshCw, ExternalLink, Globe, FileText, Newspaper, Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, Target, Users, Loader2, BarChart3 } from "lucide-react";
 import { findCompany, getSentimentColor, getScoreColor } from "@/lib/stockData";
+import { NIFTY50_FULL, SPY500_FULL } from "@/lib/companyData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
 import { RealTimeChart } from "@/components/charts/RealTimeChart";
@@ -24,7 +25,9 @@ export default function StockDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const company = symbol ? findCompany(symbol) : undefined;
+  const company = symbol
+    ? findCompany(symbol) || [...NIFTY50_FULL, ...SPY500_FULL].find((c) => c.symbol === symbol)
+    : undefined;
 
   useEffect(() => {
     if (!symbol) return;
