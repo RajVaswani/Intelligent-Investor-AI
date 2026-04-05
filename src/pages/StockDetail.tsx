@@ -4,9 +4,16 @@ import { ArrowLeft, RefreshCw, ExternalLink, Globe, FileText, Newspaper, Shield,
 import { findCompany, getSentimentColor, getScoreColor } from "@/lib/stockData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
-import { TradingViewChart } from "@/components/charts/TradingViewChart";
+import { RealTimeChart } from "@/components/charts/RealTimeChart";
 import { ScoreBadge } from "@/components/dashboard/ScoreBadge";
 import { useToast } from "@/hooks/use-toast";
+
+// Yahoo Finance symbol mapping for Indian stocks
+function getYahooSymbol(symbol: string, etf: string): string {
+  if (etf === "nifty50") return `${symbol}.NS`;
+  if (symbol === "BRK.B") return "BRK-B";
+  return symbol;
+}
 
 export default function StockDetail() {
   const { symbol } = useParams<{ symbol: string }>();
@@ -54,6 +61,8 @@ export default function StockDetail() {
     );
   }
 
+  const yahooSymbol = getYahooSymbol(company.symbol, company.etf);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -88,7 +97,12 @@ export default function StockDetail() {
 
       <main className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Real-time Chart */}
-        <TradingViewChart symbol={company.tradingViewSymbol} height={450} />
+        <RealTimeChart
+          symbol={company.symbol}
+          yahooSymbol={yahooSymbol}
+          height={500}
+          refreshInterval={30000}
+        />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -185,7 +199,7 @@ export default function StockDetail() {
             {/* Citations */}
             {analysis.citations.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-6">
-                <h2 className="mb-4 text-lg font-semibold text-foreground">Sources & Citations</h2>
+                <h2 className="mb-4 text-lg font-semibold text-foreground">Sources & Citations ({analysis.citations.length})</h2>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {analysis.citations.map((c, i) => (
                     <a
@@ -216,7 +230,7 @@ export default function StockDetail() {
   );
 }
 
-function AnalysisSection({ icon, title, content }: { icon: React.ReactNode; title: string; content: string }) {
+function AnalysisSection({ icon, title, content }: { icon: React.ReactNode; title: string; children?: React.ReactNode; content: string }) {
   if (!content) return null;
   return (
     <div className="rounded-xl border border-border bg-card p-5">
