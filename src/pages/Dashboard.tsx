@@ -12,6 +12,7 @@ import {
   TrendingUp, TrendingDown, Minus, Link2, PieChart, BarChart3, Briefcase
 } from "lucide-react";
 import { PortfolioPlanner } from "@/components/dashboard/PortfolioPlanner";
+import { RiskAnalytics } from "@/components/dashboard/RiskAnalytics";
 
 interface PortfolioHolding {
   id: string;
