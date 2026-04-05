@@ -8,7 +8,7 @@ import { ScoreBadge } from "@/components/dashboard/ScoreBadge";
 import type { AnalysisResult, Company } from "@/lib/stockData";
 import { getSentimentColor } from "@/lib/stockData";
 import {
-  Activity, LogOut, Plus, Trash2, RefreshCw, Loader2, Settings,
+  LogOut, Plus, Trash2, RefreshCw, Loader2, Settings,
   TrendingUp, TrendingDown, Minus, Link2, PieChart, BarChart3, Briefcase
 } from "lucide-react";
 
