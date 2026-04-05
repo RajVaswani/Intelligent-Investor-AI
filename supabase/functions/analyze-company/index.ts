@@ -171,7 +171,7 @@ Respond with this JSON structure ONLY:
   "risks": ["<specific risk with context>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>"]
 }`
 
-    const aiRes = await fetch('https://ai.lovable.dev/v1/chat/completions', {
+    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,
