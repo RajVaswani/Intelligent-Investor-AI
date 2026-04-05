@@ -148,5 +148,6 @@ export async function getCachedAnalysis(symbol: string): Promise<AnalysisResult 
       confidenceScore: (data as any).confidence_score || null,
       predictionReasoning: (data as any).prediction_reasoning || "",
     },
+    macro: extractMacro(data),
   };
 }
