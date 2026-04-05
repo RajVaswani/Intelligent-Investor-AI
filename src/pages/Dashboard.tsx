@@ -369,7 +369,7 @@ export default function Dashboard() {
                 const weight = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : "0";
 
                 return (
-                  <div key={holding.id} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30">
+                  <div key={holding.id} onClick={() => navigate(`/portfolio/${holding.symbol}`)} className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
