@@ -466,6 +466,84 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
             </div>
           </div>
 
+          {/* Action Summary */}
+          {monteCarloData.summaryLines.length > 0 && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground flex items-center gap-1">
+                📋 Action Summary
+              </h4>
+              <div className="space-y-1.5">
+                {monteCarloData.summaryLines.map((line, i) => (
+                  <p key={i} className="text-xs text-foreground">{line}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Per-Holding Monte Carlo Breakdown */}
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                <Activity className="h-3 w-3" /> Per-Holding Monte Carlo Analysis
+              </h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="px-4 py-2 text-left font-medium">Stock</th>
+                    <th className="px-4 py-2 text-right font-medium">Value</th>
+                    <th className="px-4 py-2 text-right font-medium">Exp. Return</th>
+                    <th className="px-4 py-2 text-right font-medium">Loss Prob</th>
+                    <th className="px-4 py-2 text-right font-medium">VaR 95%</th>
+                    <th className="px-4 py-2 text-right font-medium">Worst (5th)</th>
+                    <th className="px-4 py-2 text-right font-medium">Median</th>
+                    <th className="px-4 py-2 text-right font-medium">Best (95th)</th>
+                    <th className="px-4 py-2 text-center font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monteCarloData.perHolding.map((h) => (
+                    <tr key={h.symbol} className="border-b border-border/50 hover:bg-secondary/30 transition-colors group">
+                      <td className="px-4 py-2.5">
+                        <span className="font-bold text-primary">{h.symbol}</span>
+                        <p className="text-muted-foreground/70 truncate max-w-[100px]">{h.company_name}</p>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-foreground">{formatCurrency(h.marketValue)}</td>
+                      <td className={`px-4 py-2.5 text-right font-medium ${h.expectedReturn >= 0 ? "text-gain" : "text-loss"}`}>
+                        {h.expectedReturn >= 0 ? "+" : ""}{(h.expectedReturn * 100).toFixed(1)}%
+                      </td>
+                      <td className={`px-4 py-2.5 text-right font-medium ${h.probLoss > 50 ? "text-loss" : h.probLoss > 35 ? "text-warning" : "text-gain"}`}>
+                        {h.probLoss.toFixed(0)}%
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-loss">{formatCurrency(h.var95)}</td>
+                      <td className="px-4 py-2.5 text-right text-loss">{formatCurrency(h.p5)}</td>
+                      <td className="px-4 py-2.5 text-right text-foreground">{formatCurrency(h.p50)}</td>
+                      <td className="px-4 py-2.5 text-right text-gain">{formatCurrency(h.p95)}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${h.actionColor} ${
+                          h.action === "Reduce / Exit" ? "bg-loss/15" :
+                          h.action === "Add More" || h.action === "Strong Hold" ? "bg-gain/15" :
+                          "bg-warning/15"
+                        }`}>{h.action}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Per-holding action reasons on hover/expand */}
+            <div className="px-4 py-3 border-t border-border space-y-1.5">
+              {monteCarloData.perHolding.map((h) => (
+                <div key={h.symbol} className="flex items-start gap-2 text-[10px]">
+                  <span className="font-bold text-primary min-w-[50px]">{h.symbol}</span>
+                  <span className={h.actionColor}>{h.action}:</span>
+                  <span className="text-muted-foreground">{h.reason}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Detailed Metrics Toggle */}
           <div className="flex items-center justify-center">
             <button
