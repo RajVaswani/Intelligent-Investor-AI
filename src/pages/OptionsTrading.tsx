@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/dashboard/Header";
 import { OptionsChain } from "@/components/options/OptionsChain";
 import { IntradayAnalysis } from "@/components/options/IntradayAnalysis";
 import { AIStrategies } from "@/components/options/AIStrategies";
 import { SymbolSearch } from "@/components/options/SymbolSearch";
+import { OptionsResearch } from "@/components/options/OptionsResearch";
+import { TradingViewChart } from "@/components/charts/TradingViewChart";
 import {
   fetchOptionsChain,
   fetchIntradayData,
@@ -13,34 +15,40 @@ import {
   type IntradayData,
   type AIStrategyResult,
 } from "@/lib/api/optionsData";
+import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
+import type { AnalysisResult } from "@/lib/stockData";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, BarChart3, Brain, Activity } from "lucide-react";
+import { Loader2, TrendingUp, BarChart3, Brain, Activity, LineChart, Search } from "lucide-react";
 
-type Tab = "chain" | "intraday" | "strategies";
+type Tab = "chart" | "chain" | "intraday" | "strategies" | "research";
 
 export default function OptionsTrading() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const symbol = searchParams.get("symbol") || "AAPL";
-  const [activeTab, setActiveTab] = useState<Tab>("chain");
+  const [activeTab, setActiveTab] = useState<Tab>("chart");
   const [loading, setLoading] = useState(false);
   const [optionsData, setOptionsData] = useState<OptionsChainData | null>(null);
   const [intradayData, setIntradayData] = useState<IntradayData | null>(null);
   const [strategies, setStrategies] = useState<AIStrategyResult | null>(null);
   const [strategiesLoading, setStrategiesLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   const loadData = useCallback(async (sym: string) => {
     setLoading(true);
     setStrategies(null);
+    setAnalysis(null);
     try {
-      const [chain, intraday] = await Promise.all([
+      const [chain, intraday, cached] = await Promise.all([
         fetchOptionsChain(sym),
         fetchIntradayData(sym),
+        getCachedAnalysis(sym),
       ]);
       setOptionsData(chain);
       setIntradayData(intraday);
+      setAnalysis(cached);
       if (!chain && !intraday) {
         toast({ title: "No data found", description: `Could not load data for ${sym}`, variant: "destructive" });
       }
@@ -85,10 +93,15 @@ export default function OptionsTrading() {
     }
   };
 
+  // Map symbol to TradingView format
+  const tvSymbol = symbol.includes(".") ? symbol : `NASDAQ:${symbol}`;
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "chart", label: "TradingView", icon: <LineChart className="h-4 w-4" /> },
     { id: "chain", label: "Options Chain", icon: <TrendingUp className="h-4 w-4" /> },
-    { id: "intraday", label: "Intraday Analysis", icon: <BarChart3 className="h-4 w-4" /> },
+    { id: "intraday", label: "Intraday", icon: <BarChart3 className="h-4 w-4" /> },
     { id: "strategies", label: "AI Strategies", icon: <Brain className="h-4 w-4" /> },
+    { id: "research", label: "Micro/Macro", icon: <Search className="h-4 w-4" /> },
   ];
 
   return (
@@ -104,7 +117,7 @@ export default function OptionsTrading() {
             <div>
               <h2 className="text-2xl font-bold text-foreground">Options & Intraday</h2>
               <p className="text-sm text-muted-foreground">
-                Options chain, Greeks, intraday patterns & AI strategies for US stocks
+                TradingView charts, options chain, intraday patterns, AI strategies & deep research
               </p>
             </div>
           </div>
@@ -118,11 +131,20 @@ export default function OptionsTrading() {
             <span className="text-2xl font-bold text-primary">
               ${optionsData.regularMarketPrice?.toFixed(2)}
             </span>
+            {analysis && (
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                analysis.sentiment === "bullish" ? "bg-chart-2/20 text-chart-2" :
+                analysis.sentiment === "bearish" ? "bg-destructive/20 text-destructive" :
+                "bg-muted text-muted-foreground"
+              }`}>
+                {analysis.sentiment} · Score {analysis.overallScore}/100
+              </span>
+            )}
           </div>
         )}
 
         {/* Tabs */}
-        <div className="mb-6 flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
+        <div className="mb-6 flex flex-wrap gap-1 rounded-lg border border-border bg-muted/50 p-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -132,7 +154,7 @@ export default function OptionsTrading() {
                   loadStrategies();
                 }
               }}
-              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -155,19 +177,35 @@ export default function OptionsTrading() {
         {/* Content */}
         {!loading && (
           <>
-            {activeTab === "chain" && (
-              <OptionsChain data={optionsData} />
+            {activeTab === "chart" && (
+              <div className="space-y-4">
+                <TradingViewChart symbol={tvSymbol} height={550} interval="5" />
+                <div className="grid gap-3 md:grid-cols-3">
+                  <button onClick={() => setActiveTab("chain")} className="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50">
+                    <TrendingUp className="mb-2 h-5 w-5 text-primary" />
+                    <h4 className="text-sm font-semibold text-foreground">Options Chain →</h4>
+                    <p className="text-xs text-muted-foreground">View calls, puts, strikes, IV and open interest</p>
+                  </button>
+                  <button onClick={() => setActiveTab("intraday")} className="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50">
+                    <BarChart3 className="mb-2 h-5 w-5 text-primary" />
+                    <h4 className="text-sm font-semibold text-foreground">Intraday Analysis →</h4>
+                    <p className="text-xs text-muted-foreground">VWAP, support/resistance, volume profile</p>
+                  </button>
+                  <button onClick={() => { setActiveTab("strategies"); if (!strategies && !strategiesLoading) loadStrategies(); }} className="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50">
+                    <Brain className="mb-2 h-5 w-5 text-primary" />
+                    <h4 className="text-sm font-semibold text-foreground">AI Strategies →</h4>
+                    <p className="text-xs text-muted-foreground">AI-recommended spreads, straddles & more</p>
+                  </button>
+                </div>
+              </div>
             )}
-            {activeTab === "intraday" && (
-              <IntradayAnalysis data={intradayData} symbol={symbol} />
-            )}
+            {activeTab === "chain" && <OptionsChain data={optionsData} />}
+            {activeTab === "intraday" && <IntradayAnalysis data={intradayData} symbol={symbol} />}
             {activeTab === "strategies" && (
-              <AIStrategies
-                data={strategies}
-                loading={strategiesLoading}
-                onGenerate={loadStrategies}
-                symbol={symbol}
-              />
+              <AIStrategies data={strategies} loading={strategiesLoading} onGenerate={loadStrategies} symbol={symbol} />
+            )}
+            {activeTab === "research" && (
+              <OptionsResearch analysis={analysis} symbol={symbol} loading={analysisLoading} />
             )}
           </>
         )}
