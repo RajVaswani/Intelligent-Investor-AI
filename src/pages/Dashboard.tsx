@@ -340,6 +340,11 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* P&L + Goal Planner */}
+          {holdings.length > 0 && (
+            <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalValue} />
+          )}
+
           {/* Add Holding Form */}
           {showAddForm && (
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
