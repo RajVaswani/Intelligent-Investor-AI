@@ -36,9 +36,36 @@ function normalRandom(rng: () => number): number {
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
-export function RiskAnalytics({ holdings, analyses, livePrices }: RiskAnalyticsProps) {
+export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }: RiskAnalyticsProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [fetchedPrices, setFetchedPrices] = useState<Record<string, number>>({});
+
+  // Fetch live prices if not provided externally
+  useEffect(() => {
+    if (externalPrices && Object.keys(externalPrices).length > 0) return;
+    if (holdings.length === 0) return;
+    const fetchPrices = async () => {
+      const prices: Record<string, number> = {};
+      await Promise.all(
+        holdings.map(async (h) => {
+          try {
+            const yahooSymbol = (h as any).exchange === "NSE" ? `${h.symbol}.NS` : h.symbol;
+            const { data, error } = await supabase.functions.invoke("stock-data", {
+              body: { symbol: yahooSymbol, range: "1d", interval: "1d" },
+            });
+            if (!error && data?.success && data.data?.regularMarketPrice) {
+              prices[h.symbol] = data.data.regularMarketPrice;
+            }
+          } catch { /* skip */ }
+        })
+      );
+      setFetchedPrices(prices);
+    };
+    fetchPrices();
+  }, [holdings, externalPrices]);
+
+  const livePrices = (externalPrices && Object.keys(externalPrices).length > 0) ? externalPrices : fetchedPrices;
 
   const formatCurrency = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
