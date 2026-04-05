@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface StockCandle {
   time: number;
   open: number;
@@ -22,19 +24,10 @@ export async function fetchStockData(
   range = "1d",
   interval = "5m"
 ): Promise<StockData | null> {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-  const url = `${supabaseUrl}/functions/v1/stock-data?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-    },
+  const { data, error } = await supabase.functions.invoke("stock-data", {
+    body: { symbol, range, interval },
   });
 
-  if (!res.ok) return null;
-  const json = await res.json();
-  if (!json.success) return null;
-  return json.data;
+  if (error || !data?.success) return null;
+  return data.data;
 }
