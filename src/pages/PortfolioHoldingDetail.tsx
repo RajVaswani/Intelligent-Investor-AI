@@ -170,6 +170,62 @@ export default function PortfolioHoldingDetail() {
           refreshInterval={30000}
         />
 
+        {/* P&L Detail Card */}
+        {holding && (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Live Price</p>
+              <p className="mt-1 text-lg font-bold text-foreground">
+                {livePrice ? `$${livePrice.toFixed(2)}` : "—"}
+              </p>
+              {dayChangePct !== null && (
+                <p className={`text-xs font-medium ${dayChangePct >= 0 ? "text-gain" : "text-loss"}`}>
+                  {dayChangePct >= 0 ? "+" : ""}{dayChangePct.toFixed(2)}% today
+                </p>
+              )}
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg Cost</p>
+              <p className="mt-1 text-lg font-bold text-foreground">${holding.avg_price.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">{holding.quantity} shares</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cost Basis</p>
+              <p className="mt-1 text-lg font-bold text-foreground">${costBasis.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Market Value</p>
+              <p className="mt-1 text-lg font-bold text-foreground">
+                {marketValue !== null ? `$${marketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
+              </p>
+            </div>
+            <div className={`rounded-xl border p-4 ${unrealizedPnL !== null && unrealizedPnL >= 0 ? "border-gain/20 bg-gain/5" : unrealizedPnL !== null ? "border-loss/20 bg-loss/5" : "border-border bg-card"}`}>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Unrealized P&L</p>
+              {unrealizedPnL !== null && pnlPercent !== null ? (
+                <>
+                  <p className={`mt-1 text-lg font-bold ${unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                    {unrealizedPnL >= 0 ? "+" : ""}${unrealizedPnL.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className={`text-xs font-medium ${pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
+                    {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(1)}%
+                  </p>
+                </>
+              ) : <p className="mt-1 text-lg font-bold text-muted-foreground">—</p>}
+            </div>
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">1Y Target Upside</p>
+              {upside1y !== null && target1y ? (
+                <>
+                  <p className={`mt-1 text-lg font-bold ${upside1y >= 0 ? "text-gain" : "text-loss"}`}>
+                    {upside1y >= 0 ? "+" : ""}{upside1y.toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">Target: ${target1y.toFixed(2)}</p>
+                </>
+              ) : <p className="mt-1 text-lg font-bold text-muted-foreground">—</p>}
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
