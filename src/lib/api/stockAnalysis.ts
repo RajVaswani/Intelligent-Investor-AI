@@ -99,6 +99,7 @@ export async function getCachedAnalyses(etf: string): Promise<AnalysisResult[]> 
         confidenceScore: (row as any).confidence_score || null,
         predictionReasoning: (row as any).prediction_reasoning || "",
       },
+      macro: extractMacro(row),
     };
   });
 }
