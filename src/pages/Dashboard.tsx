@@ -300,8 +300,9 @@ export default function Dashboard() {
             <button onClick={() => setShowAddForm(!showAddForm)} className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
               <Plus className="h-4 w-4" /> Add Holding
             </button>
-            <button onClick={fetchIBKRPortfolio} className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground hover:bg-secondary/80">
-              <Link2 className="h-4 w-4" /> Sync from IBKR
+            <button onClick={fetchIBKRPortfolio} disabled={ibkrSyncing} className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50">
+              {ibkrSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              {ibkrSyncing ? "Syncing..." : "Sync from IBKR"}
             </button>
             {holdings.length > 0 && (
               <button onClick={analyzeAll} className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground hover:bg-secondary/80">
