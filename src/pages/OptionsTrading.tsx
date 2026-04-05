@@ -66,15 +66,11 @@ export default function OptionsTrading() {
             <span className="ml-3 text-muted-foreground">Loading {symbol}…</span>
           </div>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
-            {/* TradingView chart — main area */}
-            <div className="min-h-[500px]">
-              <TradingViewChart symbol={tvSymbol} height={600} interval="1" />
-            </div>
-            {/* Live signals sidebar */}
-            <div className="max-h-[calc(100vh-160px)] overflow-y-auto">
-              <LivePredictions data={intradayData} symbol={symbol} />
-            </div>
+          <div className="space-y-4">
+            {/* TradingView chart — full width */}
+            <TradingViewChart symbol={tvSymbol} height={550} interval="1" />
+            {/* Live signals below */}
+            <LivePredictions data={intradayData} symbol={symbol} />
           </div>
         )}
       </div>
