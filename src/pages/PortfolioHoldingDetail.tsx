@@ -143,7 +143,9 @@ export default function PortfolioHoldingDetail() {
             {holding && (
               <div className="text-right text-xs text-muted-foreground">
                 <p>{holding.quantity} shares · Avg ${holding.avg_price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
-                <p className="font-medium text-foreground">${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                <p className="font-medium text-foreground">
+                  {livePrice ? `$${(holding.quantity * livePrice).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `$${costBasis.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                </p>
               </div>
             )}
             {analysis && <ScoreBadge score={analysis.overallScore} size="lg" />}
