@@ -86,9 +86,36 @@ export default function PortfolioHoldingDetail() {
     );
   }
 
+  // Fetch live price
+  useEffect(() => {
+    if (!symbol || !holding) return;
+    const yahooSym = holding.exchange === "NSE" ? `${symbol}.NS` : symbol;
+    const fetchPrice = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("stock-data", {
+          body: { symbol: yahooSym, range: "1d", interval: "1d" },
+        });
+        if (!error && data?.success) {
+          if (data.data?.regularMarketPrice) setLivePrice(data.data.regularMarketPrice);
+          if (data.data?.previousClose) setPrevClose(data.data.previousClose);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 30000);
+    return () => clearInterval(interval);
+  }, [symbol, holding]);
+
   const yahooSymbol = holding?.exchange === "NSE" ? `${symbol}.NS` : symbol;
   const displayName = holding?.company_name || symbol;
-  const value = holding ? holding.quantity * holding.avg_price : 0;
+  const costBasis = holding ? holding.quantity * holding.avg_price : 0;
+  const marketValue = holding && livePrice ? holding.quantity * livePrice : null;
+  const unrealizedPnL = marketValue !== null ? marketValue - costBasis : null;
+  const pnlPercent = unrealizedPnL !== null && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : null;
+  const dayChange = livePrice && prevClose ? livePrice - prevClose : null;
+  const dayChangePct = dayChange && prevClose ? (dayChange / prevClose) * 100 : null;
+  const target1y = analysis?.prediction?.priceTarget1y;
+  const upside1y = livePrice && target1y ? ((target1y - livePrice) / livePrice) * 100 : null;
 
   return (
     <div className="min-h-screen bg-background">
