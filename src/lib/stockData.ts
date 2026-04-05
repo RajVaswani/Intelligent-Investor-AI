@@ -52,6 +52,7 @@ export interface AnalysisResult {
   lastUpdated: string;
   prediction?: PredictionData;
   macro?: MacroAnalysis;
+  stockSplitCaveat?: string | null;
   isLoading?: boolean;
 }
 
