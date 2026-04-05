@@ -87,8 +87,9 @@ export async function fetchOptionsChain(symbol: string): Promise<OptionsChainDat
 }
 
 export async function fetchIntradayData(symbol: string): Promise<IntradayData | null> {
+  const yahooSymbol = toYahooSymbol(symbol);
   const { data, error } = await supabase.functions.invoke("options-data", {
-    body: { symbol, type: "intraday" },
+    body: { symbol: yahooSymbol, type: "intraday" },
   });
   if (error || !data?.success) return null;
   return data.data;
