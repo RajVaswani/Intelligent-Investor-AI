@@ -178,18 +178,46 @@ export default function Dashboard() {
     }
     if (!user) return;
     setIbkrSyncing(true);
-    toast({ title: "Fetching from IBKR...", description: "Requesting Flex Query report — this may take a moment" });
+    toast({ title: "Fetching from IBKR...", description: "Step 1: Requesting Flex Query report..." });
     try {
-      const { data, error } = await supabase.functions.invoke("ibkr-portfolio", {
-        body: { token: ibkrToken, queryId: ibkrQueryId, userId: user.id },
+      // Step 1: Request the report
+      const { data: reqData, error: reqError } = await supabase.functions.invoke("ibkr-portfolio", {
+        body: { token: ibkrToken, queryId: ibkrQueryId, userId: user.id, step: "request" },
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to fetch portfolio");
+      if (reqError) throw new Error(reqError.message);
+      if (!reqData?.success) throw new Error(reqData?.error || "Failed to request Flex report");
 
-      // Reload holdings
-      const { data: holdings } = await supabase.from("user_portfolios").select("*").eq("user_id", user.id);
-      if (holdings) setHoldings(holdings as PortfolioHolding[]);
-      toast({ title: "Portfolio synced!", description: `Imported ${data.data.positionsCount} positions from IBKR` });
+      const refCode = reqData.referenceCode;
+      toast({ title: "Report requested", description: "Waiting for IBKR to generate report..." });
+
+      // Step 2: Poll for results (client-side polling avoids edge function timeout)
+      let attempts = 0;
+      const maxAttempts = 10;
+      while (attempts < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 3000));
+        attempts++;
+
+        const { data: fetchData, error: fetchError } = await supabase.functions.invoke("ibkr-portfolio", {
+          body: { token: ibkrToken, userId: user.id, step: "fetch", referenceCode: refCode },
+        });
+        if (fetchError) throw new Error(fetchError.message);
+        if (!fetchData?.success) throw new Error(fetchData?.error || "Failed to fetch report");
+
+        if (fetchData.status === "generating") {
+          toast({ title: "Still generating...", description: `Attempt ${attempts}/${maxAttempts} — waiting for IBKR...` });
+          continue;
+        }
+
+        if (fetchData.status === "complete") {
+          // Reload holdings
+          const { data: updatedHoldings } = await supabase.from("user_portfolios").select("*").eq("user_id", user.id);
+          if (updatedHoldings) setHoldings(updatedHoldings as PortfolioHolding[]);
+          toast({ title: "Portfolio synced!", description: `Imported ${fetchData.data.positionsCount} positions from IBKR` });
+          return;
+        }
+      }
+
+      toast({ title: "Timeout", description: "IBKR report is still generating. Please try again in a minute.", variant: "destructive" });
     } catch (err: any) {
       toast({ title: "IBKR Sync Failed", description: err.message, variant: "destructive" });
     } finally {
