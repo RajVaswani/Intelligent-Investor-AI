@@ -187,6 +187,8 @@ export default function StockDetail() {
                 )}
               </div>
             )}
+            {/* Micro Analysis Grid */}
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">📊 Micro — Company Fundamentals</h2>
             <div className="grid gap-6 lg:grid-cols-2">
               <AnalysisSection icon={<Globe className="h-5 w-5 text-primary" />} title="Website & Digital Insights" content={analysis.websiteInsights} />
               <AnalysisSection icon={<FileText className="h-5 w-5 text-gain" />} title="Financial Highlights" content={analysis.financialHighlights} />
@@ -214,6 +216,21 @@ export default function StockDetail() {
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">{analysis.managementOutlook}</p>
               </div>
+            )}
+
+            {/* Macro Analysis Section */}
+            {analysis.macro && (
+              <>
+                <h2 className="mt-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">🌍 Macro — External Forces & Risk Intelligence</h2>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <MacroSection emoji="⚔️" title="Geopolitical & Trade Risk" content={analysis.macro.geopoliticalAnalysis} borderColor="border-loss/20" bgColor="bg-loss/5" />
+                  <MacroSection emoji="🔍" title="Controversy & Scandal Scanner" content={analysis.macro.controversyScanner} borderColor="border-warning/20" bgColor="bg-warning/5" />
+                  <MacroSection emoji="📈" title="Macro-Economic Factors" content={analysis.macro.macroEconomicFactors} borderColor="border-primary/20" bgColor="bg-primary/5" />
+                  <MacroSection emoji="🏭" title="Sector Tailwinds & Headwinds" content={analysis.macro.sectorTailwindsHeadwinds} borderColor="border-gain/20" bgColor="bg-gain/5" />
+                  <MacroSection emoji="🗳️" title="Regional Sentiment & Flows" content={analysis.macro.regionalSentiment} borderColor="border-primary/20" bgColor="bg-primary/5" />
+                  <MacroSection emoji="📰" title="Media Manipulation Check" content={analysis.macro.mediaManipulationCheck} borderColor="border-warning/20" bgColor="bg-warning/5" />
+                </div>
+              </>
             )}
 
             {/* Strengths & Risks */}
