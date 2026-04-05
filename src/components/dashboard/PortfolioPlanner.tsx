@@ -157,7 +157,7 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   // ROI goal analysis
   const goalAnalysis = useMemo(() => {
     const targetPct = parseFloat(targetROI) || 0;
-    const _months = parseInt(timeHorizon) || 12;
+    
     const targetValue = portfolioPnL.totalEstimated * (1 + targetPct / 100);
     const projectedEnd = projectionData[projectionData.length - 1];
     const onTrack = projectedEnd ? projectedEnd.base >= targetValue : false;
