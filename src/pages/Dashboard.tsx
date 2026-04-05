@@ -240,23 +240,36 @@ export default function Dashboard() {
           {showSettings && (
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-primary" /> IBKR Client Portal Gateway
+                <Link2 className="h-4 w-4 text-primary" /> IBKR Flex Query Integration
               </h3>
               <p className="text-xs text-muted-foreground">
-                Enter your IBKR Client Portal Gateway URL (e.g. https://localhost:5000). You must have IB Gateway or TWS running with Client Portal API enabled.
+                Enter your IBKR Flex Query credentials. In IBKR Account Management → Reports → Flex Queries → create a "Portfolio" query, then generate a Flex Web Service Token.
               </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="https://localhost:5000"
-                  value={ibkrUrl}
-                  onChange={(e) => setIbkrUrl(e.target.value)}
-                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-                />
-                <button onClick={saveIbkrUrl} disabled={ibkrLoading} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                  Save
-                </button>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Flex Token</label>
+                  <input
+                    type="password"
+                    placeholder="Your Flex Web Service Token"
+                    value={ibkrToken}
+                    onChange={(e) => setIbkrToken(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Query ID</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 123456"
+                    value={ibkrQueryId}
+                    onChange={(e) => setIbkrQueryId(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                  />
+                </div>
               </div>
+              <button onClick={saveIbkrSettings} disabled={ibkrLoading} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                {ibkrLoading ? "Saving..." : "Save Credentials"}
+              </button>
             </div>
           )}
 
