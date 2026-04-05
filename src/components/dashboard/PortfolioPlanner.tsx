@@ -100,26 +100,26 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   // Portfolio-level P&L
   const portfolioPnL = useMemo(() => {
     const totalCost = holdingsPnL.reduce((s, h) => s + h.costBasis, 0);
-    const totalEstimated = holdingsPnL.reduce((s, h) => s + h.estimatedValue, 0);
+    const totalEstimated = holdingsPnL.reduce((s, h) => s + h.marketValue, 0);
     const totalUnrealized = totalEstimated - totalCost;
     const totalPnlPct = totalCost > 0 ? (totalUnrealized / totalCost) * 100 : 0;
-    const projected1y = holdingsPnL.reduce((s, h) => s + (h.projectedValue1y || h.estimatedValue), 0);
+    const projected1y = holdingsPnL.reduce((s, h) => s + (h.projectedValue1y || h.marketValue), 0);
     return { totalCost, totalEstimated, totalUnrealized, totalPnlPct, projected1y };
   }, [holdingsPnL]);
 
   // Generate projection chart data
   const projectionData = useMemo((): ProjectionPoint[] => {
-    const months = parseInt(timeHorizon) || 12;
+    const _months = parseInt(timeHorizon) || 12;
     const monthly = parseFloat(monthlyInvestment) || 0;
 
     // Calculate weighted avg growth rate from AI predictions
     const analyzedHoldings = holdingsPnL.filter((h) => h.projectedValue1y !== null);
     let avgAnnualGrowth = 0.08; // default 8%
     if (analyzedHoldings.length > 0) {
-      const totalWeight = analyzedHoldings.reduce((s, h) => s + h.estimatedValue, 0);
+      const totalWeight = analyzedHoldings.reduce((s, h) => s + h.marketValue, 0);
       avgAnnualGrowth = analyzedHoldings.reduce((s, h) => {
-        const growth = h.projectedValue1y! / h.estimatedValue - 1;
-        const weight = h.estimatedValue / totalWeight;
+        const growth = h.projectedValue1y! / h.marketValue - 1;
+        const weight = h.marketValue / totalWeight;
         return s + growth * weight;
       }, 0);
     }
@@ -157,7 +157,7 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   // ROI goal analysis
   const goalAnalysis = useMemo(() => {
     const targetPct = parseFloat(targetROI) || 0;
-    const months = parseInt(timeHorizon) || 12;
+    const _months = parseInt(timeHorizon) || 12;
     const targetValue = portfolioPnL.totalEstimated * (1 + targetPct / 100);
     const projectedEnd = projectionData[projectionData.length - 1];
     const onTrack = projectedEnd ? projectedEnd.base >= targetValue : false;
@@ -170,7 +170,7 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
         symbol: h.symbol,
         reason: h.recommendation === "sell" ? "AI recommends selling" : "Bearish sentiment",
         risk: h.topRisk,
-        impact: h.estimatedValue,
+        impact: h.marketValue,
       }));
 
     return { targetValue, onTrack, gap, threats };
@@ -235,13 +235,13 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
                   </td>
                   <td className="px-4 py-2.5 text-right text-foreground">{h.quantity}</td>
                   <td className="px-4 py-2.5 text-right text-foreground">${h.avg_price.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right text-foreground">{h.hasEstimate ? `$${h.currentEstimate.toFixed(2)}` : "—"}</td>
-                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{h.hasEstimate ? formatCurrency(h.estimatedValue) : "—"}</td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.hasEstimate ? `${h.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(h.unrealizedPnL)}` : "—"}
+                  <td className="px-4 py-2.5 text-right text-foreground">{h.hasLivePrice ? `$${h.currentPrice.toFixed(2)}` : "—"}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{h.hasLivePrice ? formatCurrency(h.marketValue) : "—"}</td>
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasLivePrice ? "text-muted-foreground" : h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasLivePrice ? `${h.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(h.unrealizedPnL)}` : "—"}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.hasEstimate ? `${h.pnlPercent >= 0 ? "+" : ""}${h.pnlPercent.toFixed(1)}%` : "—"}
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasLivePrice ? "text-muted-foreground" : h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasLivePrice ? `${h.pnlPercent >= 0 ? "+" : ""}${h.pnlPercent.toFixed(1)}%` : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     {h.recommendation && (
