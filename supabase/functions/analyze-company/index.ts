@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
   try {
     const { symbol, name, sector, website, etf } = await req.json()
 
-    if (!symbol || !name || !website || !etf) {
+    if (!symbol || !name || !etf) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
