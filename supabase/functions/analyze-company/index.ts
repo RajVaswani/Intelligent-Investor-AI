@@ -168,7 +168,14 @@ Respond with this JSON structure ONLY:
   "competitivePosition": "<4-5 sentences on competitive advantages, market share, peer comparison, barriers to entry>",
   "managementOutlook": "<3-4 sentences on management quality, strategic direction, guidance, capital deployment>",
   "strengths": ["<specific strength with data>", "<strength 2>", "<strength 3>", "<strength 4>", "<strength 5>"],
-  "risks": ["<specific risk with context>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>"]
+  "risks": ["<specific risk with context>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>"],
+  "priceTarget1w": <predicted price in 1 week as number>,
+  "priceTarget1m": <predicted price in 1 month as number>,
+  "priceTarget3m": <predicted price in 3 months as number>,
+  "priceTarget1y": <predicted price in 1 year as number>,
+  "recommendation": "<buy|hold|sell>",
+  "confidenceScore": <0-100 confidence in prediction>,
+  "predictionReasoning": "<4-5 sentences explaining the prediction rationale, citing specific catalysts, valuation metrics, and growth trajectory>"
 }`
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
