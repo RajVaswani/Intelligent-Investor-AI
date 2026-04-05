@@ -78,14 +78,6 @@ export default function PortfolioHoldingDetail() {
     }
   }, [companyForAnalysis, toast]);
 
-  if (!symbol) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-lg text-foreground">Holding not found</p>
-      </div>
-    );
-  }
-
   // Fetch live price
   useEffect(() => {
     if (!symbol || !holding) return;
@@ -102,9 +94,17 @@ export default function PortfolioHoldingDetail() {
       } catch { /* ignore */ }
     };
     fetchPrice();
-    const interval = setInterval(fetchPrice, 30000);
-    return () => clearInterval(interval);
+    const iv = setInterval(fetchPrice, 30000);
+    return () => clearInterval(iv);
   }, [symbol, holding]);
+
+  if (!symbol) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-lg text-foreground">Holding not found</p>
+      </div>
+    );
+  }
 
   const yahooSymbol = holding?.exchange === "NSE" ? `${symbol}.NS` : symbol;
   const displayName = holding?.company_name || symbol;
