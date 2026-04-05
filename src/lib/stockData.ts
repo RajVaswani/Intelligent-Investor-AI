@@ -25,6 +25,15 @@ export interface PredictionData {
   predictionReasoning: string;
 }
 
+export interface MacroAnalysis {
+  geopoliticalAnalysis: string;
+  controversyScanner: string;
+  macroEconomicFactors: string;
+  sectorTailwindsHeadwinds: string;
+  regionalSentiment: string;
+  mediaManipulationCheck: string;
+}
+
 export interface AnalysisResult {
   id: string;
   company: Company;
