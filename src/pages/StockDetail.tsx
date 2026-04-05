@@ -311,3 +311,16 @@ function AnalysisSection({ icon, title, content }: { icon: React.ReactNode; titl
     </div>
   );
 }
+
+function MacroSection({ emoji, title, content, borderColor, bgColor }: { emoji: string; title: string; content: string; borderColor: string; bgColor: string }) {
+  if (!content) return null;
+  return (
+    <div className={`rounded-xl border ${borderColor} ${bgColor} p-5`}>
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-lg">{emoji}</span>
+        <h3 className="font-semibold text-foreground">{title}</h3>
+      </div>
+      <p className="text-sm leading-relaxed text-muted-foreground">{content}</p>
+    </div>
+  );
+}
