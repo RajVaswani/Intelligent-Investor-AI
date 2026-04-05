@@ -211,7 +211,7 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
 
     // HHI (Herfindahl-Hirschman Index) for concentration
     const hhi = sectorData.reduce((s, d) => s + Math.pow(d.pct, 2), 0);
-    const maxHhi = 10000; // 100^2
+    const _maxHhi = 10000; // 100^2
     const concentrationLevel = hhi > 4000 ? "High" : hhi > 2000 ? "Moderate" : "Low";
 
     // Top holding concentration
