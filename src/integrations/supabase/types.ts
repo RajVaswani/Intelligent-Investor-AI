@@ -19,7 +19,9 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
+          ibkr_flex_token: string | null
           ibkr_gateway_url: string | null
+          ibkr_query_id: string | null
           id: string
           updated_at: string
         }
@@ -27,7 +29,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          ibkr_flex_token?: string | null
           ibkr_gateway_url?: string | null
+          ibkr_query_id?: string | null
           id: string
           updated_at?: string
         }
@@ -35,7 +39,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          ibkr_flex_token?: string | null
           ibkr_gateway_url?: string | null
+          ibkr_query_id?: string | null
           id?: string
           updated_at?: string
         }
