@@ -32,6 +32,15 @@ export async function analyzeCompany(company: Company): Promise<AnalysisResult> 
     risks: d.risks || [],
     citations: d.citations || [],
     lastUpdated: d.lastUpdated || new Date().toISOString(),
+    prediction: {
+      priceTarget1w: d.priceTarget1w || null,
+      priceTarget1m: d.priceTarget1m || null,
+      priceTarget3m: d.priceTarget3m || null,
+      priceTarget1y: d.priceTarget1y || null,
+      recommendation: d.recommendation || null,
+      confidenceScore: d.confidenceScore || null,
+      predictionReasoning: d.predictionReasoning || "",
+    },
   };
 }
 
