@@ -1,5 +1,6 @@
-import { Activity, RefreshCw, User, Shield } from "lucide-react";
+import { Activity, RefreshCw, User, Shield, LogOut, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
