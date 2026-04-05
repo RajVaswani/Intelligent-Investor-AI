@@ -78,9 +78,17 @@ export interface AIStrategyResult {
   riskWarning: string;
 }
 
+// Nifty 50 symbols need .NS suffix for Yahoo Finance
+import { NIFTY50_FULL } from "@/lib/companyData";
+const NIFTY_SYMBOLS = new Set(NIFTY50_FULL.map((c) => c.symbol));
+function toYahooSymbol(sym: string): string {
+  return NIFTY_SYMBOLS.has(sym) ? `${sym}.NS` : sym;
+}
+
 export async function fetchOptionsChain(symbol: string): Promise<OptionsChainData | null> {
+  const yahooSymbol = toYahooSymbol(symbol);
   const { data, error } = await supabase.functions.invoke("options-data", {
-    body: { symbol, type: "chain" },
+    body: { symbol: yahooSymbol, type: "chain" },
   });
   if (error || !data?.success) return null;
   return data.data;
