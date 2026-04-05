@@ -95,7 +95,7 @@ export default function PortfolioHoldingDetail() {
       } catch { /* ignore */ }
     };
     fetchPrice();
-    const iv = setInterval(fetchPrice, 30000);
+    const iv = setInterval(fetchPrice, 1000);
     return () => clearInterval(iv);
   }, [symbol, holding]);
 
