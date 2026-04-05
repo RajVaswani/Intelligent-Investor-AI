@@ -12,6 +12,7 @@ import {
   TrendingUp, TrendingDown, Minus, Link2, PieChart, BarChart3, Briefcase
 } from "lucide-react";
 import { PortfolioPlanner } from "@/components/dashboard/PortfolioPlanner";
+import { RiskAnalytics } from "@/components/dashboard/RiskAnalytics";
 
 interface PortfolioHolding {
   id: string;
@@ -343,6 +344,11 @@ export default function Dashboard() {
           {/* P&L + Goal Planner */}
           {holdings.length > 0 && (
             <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalValue} />
+          )}
+
+          {/* Aladdin-Inspired Risk Analytics */}
+          {holdings.length > 0 && (
+            <RiskAnalytics holdings={holdings} analyses={analyses} livePrices={{}} />
           )}
 
           {/* Add Holding Form */}
