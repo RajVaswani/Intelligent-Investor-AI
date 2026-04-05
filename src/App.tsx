@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import StockDetail from "./pages/StockDetail.tsx";
 import Auth from "./pages/Auth.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import PortfolioHoldingDetail from "./pages/PortfolioHoldingDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
