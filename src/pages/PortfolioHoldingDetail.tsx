@@ -307,6 +307,15 @@ export default function PortfolioHoldingDetail() {
                     {analysis.prediction.predictionReasoning}
                   </p>
                 )}
+
+                {analysis.stockSplitCaveat && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                    <p className="text-xs leading-relaxed text-warning">
+                      <span className="font-semibold">Stock Split Notice:</span> {analysis.stockSplitCaveat}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
