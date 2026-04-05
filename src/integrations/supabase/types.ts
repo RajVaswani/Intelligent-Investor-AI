@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          ibkr_gateway_url: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          ibkr_gateway_url?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          ibkr_gateway_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_analyses: {
         Row: {
           company_name: string
@@ -107,6 +134,48 @@ export type Database = {
           symbol?: string
           updated_at?: string
           website_insights?: string | null
+        }
+        Relationships: []
+      }
+      user_portfolios: {
+        Row: {
+          avg_price: number
+          company_name: string
+          created_at: string
+          currency: string | null
+          exchange: string | null
+          id: string
+          quantity: number
+          sector: string | null
+          symbol: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_price?: number
+          company_name: string
+          created_at?: string
+          currency?: string | null
+          exchange?: string | null
+          id?: string
+          quantity?: number
+          sector?: string | null
+          symbol: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_price?: number
+          company_name?: string
+          created_at?: string
+          currency?: string | null
+          exchange?: string | null
+          id?: string
+          quantity?: number
+          sector?: string | null
+          symbol?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
