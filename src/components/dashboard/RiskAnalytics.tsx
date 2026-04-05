@@ -96,7 +96,7 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
       if (analysis?.sentiment === "bearish") bearishWeight += weight;
       if (analysis?.prediction?.confidenceScore) {
         avgConfidence += analysis.prediction.confidenceScore * weight;
-        confidenceCount++;
+        _confidenceCount++;
       }
     });
 
