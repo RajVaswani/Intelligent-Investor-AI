@@ -154,14 +154,48 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
     return data;
   }, [timeHorizon, monthlyInvestment, holdingsPnL, portfolioPnL]);
 
-  // ROI goal analysis
+  // ROI goal analysis with investment recommendation
   const goalAnalysis = useMemo(() => {
     const targetPct = parseFloat(targetROI) || 0;
+    const months = parseInt(timeHorizon) || 12;
+    const monthly = parseFloat(monthlyInvestment) || 0;
     
-    const targetValue = portfolioPnL.totalEstimated * (1 + targetPct / 100);
+    const currentPortfolio = portfolioPnL.totalEstimated;
+    const totalPlannedInvestment = monthly * months;
+    const totalInvested = portfolioPnL.totalCost + totalPlannedInvestment;
+    const targetValue = totalInvested * (1 + targetPct / 100);
     const projectedEnd = projectionData[projectionData.length - 1];
     const onTrack = projectedEnd ? projectedEnd.base >= targetValue : false;
     const gap = projectedEnd ? targetValue - projectedEnd.base : 0;
+
+    // Calculate weighted avg monthly growth
+    const analyzedHoldings = holdingsPnL.filter((h) => h.projectedValue1y !== null);
+    let avgAnnualGrowth = 0.08;
+    if (analyzedHoldings.length > 0) {
+      const totalWeight = analyzedHoldings.reduce((s, h) => s + h.marketValue, 0);
+      avgAnnualGrowth = analyzedHoldings.reduce((s, h) => {
+        const growth = h.projectedValue1y! / h.marketValue - 1;
+        const weight = h.marketValue / totalWeight;
+        return s + growth * weight;
+      }, 0);
+    }
+    const monthlyGrowth = Math.pow(1 + avgAnnualGrowth, 1 / 12) - 1;
+
+    // Calculate required monthly investment to hit target
+    let requiredMonthly = 0;
+    if (targetPct > 0 && months > 0) {
+      // FV = P*(1+r)^n + C*[((1+r)^n - 1)/r]  =>  C = (FV - P*(1+r)^n) * r / ((1+r)^n - 1)
+      const r = monthlyGrowth;
+      const n = months;
+      const compounded = Math.pow(1 + r, n);
+      const futureOfCurrent = currentPortfolio * compounded;
+      const needed = targetValue - futureOfCurrent;
+      if (r > 0 && needed > 0) {
+        requiredMonthly = (needed * r) / (compounded - 1);
+      } else if (r === 0 && needed > 0) {
+        requiredMonthly = needed / n;
+      }
+    }
 
     // Threats from holdings
     const threats = holdingsPnL
@@ -173,8 +207,8 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
         impact: h.marketValue,
       }));
 
-    return { targetValue, onTrack, gap, threats };
-  }, [targetROI, timeHorizon, portfolioPnL, projectionData, holdingsPnL]);
+    return { targetValue, onTrack, gap, threats, requiredMonthly, totalPlannedInvestment, totalInvested, avgAnnualGrowth };
+  }, [targetROI, timeHorizon, monthlyInvestment, portfolioPnL, projectionData, holdingsPnL]);
 
   const formatCurrency = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
@@ -317,25 +351,52 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
               </div>
             </div>
 
-            {/* Goal Status */}
+            {/* Goal Status & ROI Calculator */}
             {targetROI && (
-              <div className={`rounded-lg p-4 ${goalAnalysis.onTrack ? "border border-gain/20 bg-gain/5" : "border border-warning/20 bg-warning/5"}`}>
-                <div className="flex items-center gap-2">
-                  {goalAnalysis.onTrack ? (
-                    <TrendingUp className="h-5 w-5 text-gain" />
-                  ) : (
-                    <AlertTriangle className="h-5 w-5 text-warning" />
-                  )}
-                  <span className={`text-sm font-bold ${goalAnalysis.onTrack ? "text-gain" : "text-warning"}`}>
-                    {goalAnalysis.onTrack ? "On Track to Hit Your Goal!" : "Goal Requires Adjustment"}
-                  </span>
+              <div className="space-y-3">
+                <div className={`rounded-lg p-4 ${goalAnalysis.onTrack ? "border border-gain/20 bg-gain/5" : "border border-warning/20 bg-warning/5"}`}>
+                  <div className="flex items-center gap-2">
+                    {goalAnalysis.onTrack ? (
+                      <TrendingUp className="h-5 w-5 text-gain" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-warning" />
+                    )}
+                    <span className={`text-sm font-bold ${goalAnalysis.onTrack ? "text-gain" : "text-warning"}`}>
+                      {goalAnalysis.onTrack ? "On Track to Hit Your Goal!" : "Goal Requires Adjustment"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Target: {formatCurrency(goalAnalysis.targetValue)} ({targetROI}% ROI on {formatCurrency(goalAnalysis.totalInvested)} total invested) in {timeHorizon} months
+                    {!goalAnalysis.onTrack && goalAnalysis.gap > 0 && (
+                      <span className="text-warning"> — Gap: {formatCurrency(goalAnalysis.gap)}</span>
+                    )}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Target: {formatCurrency(goalAnalysis.targetValue)} ({targetROI}% ROI) in {timeHorizon} months
-                  {!goalAnalysis.onTrack && goalAnalysis.gap > 0 && (
-                    <span className="text-warning"> — Gap: {formatCurrency(goalAnalysis.gap)}</span>
-                  )}
-                </p>
+
+                {/* Investment Recommendation Card */}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border bg-secondary/20 p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Current Holdings</p>
+                    <p className="mt-1 text-lg font-bold text-foreground">{formatCurrency(portfolioPnL.totalEstimated)}</p>
+                    <p className="text-[10px] text-muted-foreground">across {holdings.length} positions</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-secondary/20 p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Planned New Investment</p>
+                    <p className="mt-1 text-lg font-bold text-foreground">{formatCurrency(goalAnalysis.totalPlannedInvestment)}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatCurrency(parseFloat(monthlyInvestment) || 0)}/mo × {timeHorizon} mo</p>
+                  </div>
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {goalAnalysis.onTrack ? "You Could Invest As Low As" : "Required Monthly Investment"}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-primary">
+                      {goalAnalysis.requiredMonthly > 0 ? formatCurrency(Math.ceil(goalAnalysis.requiredMonthly)) : "$0"}/mo
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      to reach {targetROI}% ROI ({(goalAnalysis.avgAnnualGrowth * 100).toFixed(1)}% AI-projected growth)
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
