@@ -1,5 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
-
 export interface StockCandle {
   time: number;
   open: number;
@@ -24,13 +22,6 @@ export async function fetchStockData(
   range = "1d",
   interval = "5m"
 ): Promise<StockData | null> {
-  const { data, error } = await supabase.functions.invoke("stock-data", {
-    body: null,
-    headers: {},
-  });
-
-  // Use GET-style by constructing URL with query params
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
