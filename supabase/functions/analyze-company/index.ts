@@ -255,6 +255,7 @@ Respond with this JSON structure ONLY:
           detailedAnalysis: analysis.detailedAnalysis || '',
           competitivePosition: analysis.competitivePosition || '',
           managementOutlook: analysis.managementOutlook || '',
+          stockSplitCaveat: analysis.stockSplitCaveat || null,
           citations: uniqueCitations,
         },
       }, { onConflict: 'symbol,etf' })
