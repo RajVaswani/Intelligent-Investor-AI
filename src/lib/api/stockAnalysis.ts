@@ -43,6 +43,7 @@ export async function analyzeCompany(company: Company): Promise<AnalysisResult> 
     risks: d.risks || [],
     citations: d.citations || [],
     lastUpdated: d.lastUpdated || new Date().toISOString(),
+    stockSplitCaveat: d.stockSplitCaveat || null,
     prediction: {
       priceTarget1w: d.priceTarget1w || null,
       priceTarget1m: d.priceTarget1m || null,
