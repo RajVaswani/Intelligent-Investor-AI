@@ -63,10 +63,29 @@ export function CompanyCard({ company, analysis, onAnalyze, onClick, isAnalyzing
             <span className={`text-xs font-medium capitalize ${getSentimentColor(analysis.sentiment)}`}>
               {analysis.sentiment}
             </span>
+            {analysis.prediction?.recommendation && (
+              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                analysis.prediction.recommendation === "buy" ? "bg-gain/15 text-gain" :
+                analysis.prediction.recommendation === "sell" ? "bg-loss/15 text-loss" :
+                "bg-warning/15 text-warning"
+              }`}>
+                {analysis.prediction.recommendation}
+              </span>
+            )}
             <span className="text-[10px] text-muted-foreground">
               {new Date(analysis.lastUpdated).toLocaleDateString()}
             </span>
           </div>
+          {analysis.prediction?.priceTarget1m && (
+            <p className="text-[10px] text-muted-foreground">
+              1M Target: <span className="font-medium text-foreground">
+                {analysis.prediction.priceTarget1m.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+              {analysis.prediction.confidenceScore && (
+                <span className="ml-1 text-muted-foreground/70">({analysis.prediction.confidenceScore}% conf.)</span>
+              )}
+            </p>
+          )}
           <p className="line-clamp-2 text-xs text-muted-foreground">{analysis.summary}</p>
         </div>
       )}
