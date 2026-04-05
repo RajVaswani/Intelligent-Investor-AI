@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
 
     console.log(`Analyzing ${symbol} (${name})...`)
 
+    // Collect all citations
+    const citations: Array<{ title: string; url: string; source: string }> = []
+
     // Step 1: Scrape company website
     let websiteData = ''
     try {
@@ -47,8 +50,8 @@ Deno.serve(async (req) => {
       })
       const scrapeJson = await scrapeRes.json()
       websiteData = scrapeJson?.data?.markdown || scrapeJson?.markdown || 'No data scraped'
-      // Truncate to avoid token limits
-      websiteData = websiteData.substring(0, 3000)
+      websiteData = websiteData.substring(0, 4000)
+      citations.push({ title: `${name} Official Website`, url: website, source: 'Company Website' })
     } catch (e) {
       console.error('Website scrape failed:', e)
       websiteData = 'Failed to scrape website'
@@ -56,47 +59,86 @@ Deno.serve(async (req) => {
 
     // Step 2: Search for news and quarterly reports
     let newsData = ''
+    let newsResults: any[] = []
     try {
       const searchRes = await fetch('https://api.firecrawl.dev/v1/search', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `${name} ${symbol} quarterly results financial performance 2025 2026`,
-          limit: 5,
+          query: `${name} ${symbol} quarterly results earnings financial performance 2025 2026`,
+          limit: 8,
           tbs: 'qdr:m',
         }),
       })
       const searchJson = await searchRes.json()
-      const results = searchJson?.data || searchJson?.results || []
-      newsData = results.map((r: any) => `[${r.title}] ${r.description || ''}`).join('\n\n')
-      newsData = newsData.substring(0, 3000)
+      newsResults = searchJson?.data || searchJson?.results || []
+      newsData = newsResults.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
+      newsData = newsData.substring(0, 4000)
+      newsResults.forEach((r: any) => {
+        if (r.url && r.title) {
+          const domain = new URL(r.url).hostname.replace('www.', '')
+          citations.push({ title: r.title, url: r.url, source: domain })
+        }
+      })
     } catch (e) {
       console.error('News search failed:', e)
       newsData = 'Failed to fetch news'
     }
 
-    // Step 3: Search Bloomberg/Reuters specifically
+    // Step 3: Search Bloomberg/Reuters/CNBC
     let financialNews = ''
     try {
       const finRes = await fetch('https://api.firecrawl.dev/v1/search', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `${name} stock analysis outlook site:bloomberg.com OR site:reuters.com OR site:cnbc.com`,
-          limit: 3,
+          query: `${name} stock analysis outlook earnings site:bloomberg.com OR site:reuters.com OR site:cnbc.com OR site:moneycontrol.com`,
+          limit: 5,
         }),
       })
       const finJson = await finRes.json()
       const finResults = finJson?.data || finJson?.results || []
-      financialNews = finResults.map((r: any) => `[${r.title}] ${r.description || ''}`).join('\n\n')
-      financialNews = financialNews.substring(0, 2000)
+      financialNews = finResults.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
+      financialNews = financialNews.substring(0, 3000)
+      finResults.forEach((r: any) => {
+        if (r.url && r.title) {
+          const domain = new URL(r.url).hostname.replace('www.', '')
+          citations.push({ title: r.title, url: r.url, source: domain })
+        }
+      })
     } catch (e) {
       console.error('Financial news search failed:', e)
       financialNews = 'Failed to fetch financial news'
     }
 
-    // Step 4: AI Analysis using Lovable AI Gateway
-    const aiPrompt = `You are a senior equity research analyst. Analyze the following company and provide a structured assessment.
+    // Step 4: Search for annual/quarterly reports
+    let reportData = ''
+    try {
+      const reportRes = await fetch('https://api.firecrawl.dev/v1/search', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `${name} annual report investor presentation Q4 Q1 2025 2026 revenue profit margin`,
+          limit: 4,
+        }),
+      })
+      const reportJson = await reportRes.json()
+      const reportResults = reportJson?.data || reportJson?.results || []
+      reportData = reportResults.map((r: any) => `[${r.title}] (${r.url}) ${r.description || ''}`).join('\n\n')
+      reportData = reportData.substring(0, 2000)
+      reportResults.forEach((r: any) => {
+        if (r.url && r.title) {
+          const domain = new URL(r.url).hostname.replace('www.', '')
+          citations.push({ title: r.title, url: r.url, source: domain })
+        }
+      })
+    } catch (e) {
+      console.error('Report search failed:', e)
+      reportData = 'No report data found'
+    }
+
+    // Step 5: AI Analysis
+    const aiPrompt = `You are a senior equity research analyst at a top investment bank. Provide an extremely detailed and comprehensive analysis.
 
 Company: ${name} (${symbol})
 Sector: ${sector}
@@ -111,16 +153,22 @@ ${newsData}
 === FINANCIAL NEWS (Bloomberg/Reuters/CNBC) ===
 ${financialNews}
 
-Provide your analysis in the following JSON format ONLY (no other text):
+=== ANNUAL/QUARTERLY REPORTS ===
+${reportData}
+
+Respond with this JSON structure ONLY:
 {
-  "overallScore": <number 0-100>,
+  "overallScore": <number 0-100, be precise based on evidence>,
   "sentiment": "<bullish|bearish|neutral>",
-  "summary": "<2-3 sentence executive summary>",
-  "websiteInsights": "<key insights from the company website>",
-  "financialHighlights": "<key financial metrics and quarterly performance>",
-  "newsDigest": "<summary of recent news sentiment and key developments>",
-  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>", "<strength 4>"],
-  "risks": ["<risk 1>", "<risk 2>", "<risk 3>", "<risk 4>"]
+  "summary": "<3-4 sentence executive summary with specific numbers and data points>",
+  "websiteInsights": "<detailed analysis of company's digital presence, products, strategy based on their website, 3-4 sentences>",
+  "financialHighlights": "<detailed financial analysis with specific revenue, profit, margin numbers from quarterly reports, 4-5 sentences>",
+  "newsDigest": "<comprehensive summary of all recent news, analyst opinions, market reactions, 4-5 sentences>",
+  "detailedAnalysis": "<8-10 sentence deep-dive covering valuation, growth drivers, competitive moat, market positioning, capital allocation, sector trends>",
+  "competitivePosition": "<4-5 sentences on competitive advantages, market share, peer comparison, barriers to entry>",
+  "managementOutlook": "<3-4 sentences on management quality, strategic direction, guidance, capital deployment>",
+  "strengths": ["<specific strength with data>", "<strength 2>", "<strength 3>", "<strength 4>", "<strength 5>"],
+  "risks": ["<specific risk with context>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>"]
 }`
 
     const aiRes = await fetch('https://ai.lovable.dev/v1/chat/completions', {
@@ -132,7 +180,7 @@ Provide your analysis in the following JSON format ONLY (no other text):
       body: JSON.stringify({
         model: 'google/gemini-3-flash-preview',
         messages: [
-          { role: 'system', content: 'You are a financial analyst. Respond ONLY with valid JSON. No markdown, no code blocks.' },
+          { role: 'system', content: 'You are a senior equity research analyst. Respond ONLY with valid JSON. No markdown, no code blocks. Be extremely detailed and cite specific numbers.' },
           { role: 'user', content: aiPrompt },
         ],
         response_format: { type: 'json_object' },
@@ -161,7 +209,12 @@ Provide your analysis in the following JSON format ONLY (no other text):
       )
     }
 
-    // Step 5: Store in database
+    // Deduplicate citations
+    const uniqueCitations = citations.filter((c, i, arr) =>
+      arr.findIndex((x) => x.url === c.url) === i
+    )
+
+    // Store in database
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -181,7 +234,12 @@ Provide your analysis in the following JSON format ONLY (no other text):
         news_digest: analysis.newsDigest || '',
         strengths: analysis.strengths || [],
         risks: analysis.risks || [],
-        raw_scraped_data: { websiteData: websiteData.substring(0, 500), newsData: newsData.substring(0, 500) },
+        raw_scraped_data: {
+          detailedAnalysis: analysis.detailedAnalysis || '',
+          competitivePosition: analysis.competitivePosition || '',
+          managementOutlook: analysis.managementOutlook || '',
+          citations: uniqueCitations,
+        },
       }, { onConflict: 'symbol,etf' })
 
     if (dbError) {
@@ -193,6 +251,7 @@ Provide your analysis in the following JSON format ONLY (no other text):
         success: true,
         data: {
           ...analysis,
+          citations: uniqueCitations,
           symbol,
           etf,
           company_name: name,
