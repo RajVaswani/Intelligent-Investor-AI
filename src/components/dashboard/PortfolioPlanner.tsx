@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
-import { Target, TrendingUp, AlertTriangle, DollarSign, Percent, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Target, TrendingUp, AlertTriangle, DollarSign, Percent, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Legend, ReferenceLine } from "recharts";
 import type { AnalysisResult } from "@/lib/stockData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PortfolioHolding {
   id: string;
