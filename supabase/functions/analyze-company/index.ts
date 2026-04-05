@@ -65,18 +65,22 @@ Deno.serve(async (req) => {
 
     // Step 1: Scrape company website
     let websiteData = ''
-    try {
-      const scrapeRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: website, formats: ['markdown'], onlyMainContent: true }),
-      })
-      const scrapeJson = await scrapeRes.json()
-      websiteData = (scrapeJson?.data?.markdown || scrapeJson?.markdown || 'No data').substring(0, 4000)
-      citations.push({ title: `${name} Official Website`, url: website, source: 'Company Website' })
-    } catch (e) {
-      console.error('Website scrape failed:', e)
-      websiteData = 'Failed to scrape'
+    if (website) {
+      try {
+        const scrapeRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${firecrawlKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: website, formats: ['markdown'], onlyMainContent: true }),
+        })
+        const scrapeJson = await scrapeRes.json()
+        websiteData = (scrapeJson?.data?.markdown || scrapeJson?.markdown || 'No data').substring(0, 4000)
+        citations.push({ title: `${name} Official Website`, url: website, source: 'Company Website' })
+      } catch (e) {
+        console.error('Website scrape failed:', e)
+        websiteData = 'Failed to scrape'
+      }
+    } else {
+      websiteData = 'No company website provided'
     }
 
     // Step 2-8: Parallel searches — micro AND macro
