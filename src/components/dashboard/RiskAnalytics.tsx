@@ -6,6 +6,7 @@ import {
   BarChart, Bar, Cell, Legend,
 } from "recharts";
 import type { AnalysisResult } from "@/lib/stockData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Holding {
   symbol: string;
