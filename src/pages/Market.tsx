@@ -15,7 +15,7 @@ const ETF_CHART: Record<ETFType, { symbol: string; yahoo: string }> = {
   spy: { symbol: "SPY", yahoo: "SPY" },
 };
 
-export default function Index() {
+export default function Market() {
   const [activeETF, setActiveETF] = useState<ETFType>("nifty50");
   const [analyses, setAnalyses] = useState<Record<string, AnalysisResult>>({});
   const [analyzingSymbols, setAnalyzingSymbols] = useState<Set<string>>(new Set());
@@ -81,7 +81,6 @@ export default function Index() {
             <p className="text-xs text-muted-foreground">Top 10 constituents by weight</p>
           </div>
 
-          {/* Real-time ETF Chart */}
           <RealTimeChart
             key={etfChart.yahoo}
             symbol={etfChart.symbol}
