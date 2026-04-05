@@ -182,12 +182,14 @@ export default function Dashboard() {
   const saveIbkrSettings = async () => {
     if (!user) return;
     setIbkrLoading(true);
-    const { error } = await supabase.from("profiles").update({
+    // Upsert into user_secrets (write-only table)
+    const { error } = await supabase.from("user_secrets" as any).upsert({
+      user_id: user.id,
       ibkr_flex_token: ibkrToken,
       ibkr_query_id: ibkrQueryId,
-    }).eq("id", user.id);
+    }, { onConflict: "user_id" });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "IBKR credentials saved" });
+    else toast({ title: "IBKR credentials saved securely" });
     setIbkrLoading(false);
     setShowSettings(false);
   };
