@@ -9,6 +9,7 @@ import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
 import type { AnalysisResult } from "@/lib/stockData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Activity } from "lucide-react";
+import { NIFTY50_FULL, SPY500_FULL } from "@/lib/companyData";
 
 export default function OptionsTrading() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,7 +49,9 @@ export default function OptionsTrading() {
     return () => clearInterval(interval);
   }, [symbol]);
 
-  const tvSymbol = symbol.includes(".") ? symbol : `NASDAQ:${symbol}`;
+  const allCompanies = [...NIFTY50_FULL, ...SPY500_FULL];
+  const company = allCompanies.find((c) => c.symbol === symbol);
+  const tvSymbol = company?.tradingViewSymbol || (symbol.includes(".") ? symbol : `NASDAQ:${symbol}`);
 
   return (
     <div className="min-h-screen bg-background">

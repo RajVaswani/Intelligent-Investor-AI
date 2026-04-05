@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 
-const POPULAR = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "SPY", "QQQ", "AMD"];
+const US_POPULAR = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "SPY", "QQQ", "AMD"];
+const NIFTY_POPULAR = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "TATAMOTORS", "LT"];
 
 interface Props {
   value: string;
@@ -10,6 +11,11 @@ interface Props {
 
 export function SymbolSearch({ value, onChange }: Props) {
   const [input, setInput] = useState(value);
+  const [market, setMarket] = useState<"US" | "IN">(
+    NIFTY_POPULAR.includes(value) ? "IN" : "US"
+  );
+
+  const popular = market === "US" ? US_POPULAR : NIFTY_POPULAR;
 
   const submit = () => {
     const s = input.trim().toUpperCase();
@@ -19,6 +25,28 @@ export function SymbolSearch({ value, onChange }: Props) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setMarket("US")}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              market === "US"
+                ? "bg-primary text-primary-foreground"
+                : "bg-background text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            🇺🇸 S&P 500
+          </button>
+          <button
+            onClick={() => setMarket("IN")}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              market === "IN"
+                ? "bg-primary text-primary-foreground"
+                : "bg-background text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            🇮🇳 Nifty 50
+          </button>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -37,7 +65,7 @@ export function SymbolSearch({ value, onChange }: Props) {
         </button>
       </div>
       <div className="flex flex-wrap gap-1">
-        {POPULAR.map((s) => (
+        {popular.map((s) => (
           <button
             key={s}
             onClick={() => { setInput(s); onChange(s); }}
