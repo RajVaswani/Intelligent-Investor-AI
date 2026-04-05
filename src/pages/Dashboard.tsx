@@ -346,6 +346,11 @@ export default function Dashboard() {
             <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalValue} />
           )}
 
+          {/* Aladdin-Inspired Risk Analytics */}
+          {holdings.length > 0 && (
+            <RiskAnalytics holdings={holdings} analyses={analyses} livePrices={{}} />
+          )}
+
           {/* Add Holding Form */}
           {showAddForm && (
             <div className="rounded-xl border border-border bg-card p-4 space-y-3">
