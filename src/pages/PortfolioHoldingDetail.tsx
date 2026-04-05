@@ -95,7 +95,7 @@ export default function PortfolioHoldingDetail() {
       } catch { /* ignore */ }
     };
     fetchPrice();
-    const iv = setInterval(fetchPrice, 30000);
+    const iv = setInterval(fetchPrice, 1000);
     return () => clearInterval(iv);
   }, [symbol, holding]);
 
@@ -168,7 +168,7 @@ export default function PortfolioHoldingDetail() {
           symbol={symbol}
           yahooSymbol={yahooSymbol}
           height={500}
-          refreshInterval={30000}
+          refreshInterval={1000}
         />
 
         {/* P&L Detail Card */}
