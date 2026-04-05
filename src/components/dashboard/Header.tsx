@@ -1,4 +1,4 @@
-import { Activity, RefreshCw, User } from "lucide-react";
+import { Activity, RefreshCw, User, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ onRefreshAll, isRefreshing }: HeaderProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return (
     <header className="border-b border-border px-6 py-4">
@@ -32,6 +32,15 @@ export function Header({ onRefreshAll, isRefreshing }: HeaderProps) {
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               {isRefreshing ? "Analyzing..." : "Refresh All"}
+            </button>
+          )}
+          {user && isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80"
+            >
+              <Shield className="h-4 w-4" />
+              Admin
             </button>
           )}
           <button
