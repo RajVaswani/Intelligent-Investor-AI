@@ -296,6 +296,13 @@ export default function StockDetail() {
           </>
         )}
       </main>
+
+      <StockChat
+        symbol={company.symbol}
+        companyName={company.name}
+        analysis={analysis}
+        sector={company.sector}
+      />
     </div>
   );
 }

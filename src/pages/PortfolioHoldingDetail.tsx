@@ -418,6 +418,16 @@ export default function PortfolioHoldingDetail() {
           </>
         )}
       </main>
+
+      <StockChat
+        symbol={symbol}
+        companyName={displayName}
+        analysis={analysis}
+        livePrice={livePrice}
+        avgCost={holding?.avg_price}
+        quantity={holding?.quantity}
+        sector={holding?.sector || undefined}
+      />
     </div>
   );
 }
