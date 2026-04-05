@@ -92,7 +92,7 @@ export default function Index() {
           </div>
 
           {/* ETF Index Chart */}
-          <TradingViewChart symbol={ETF_CHART_SYMBOLS[activeETF]} height={1050} />
+          <TradingViewChart symbol={ETF_CHART_SYMBOLS[activeETF]} height={500} />
 
           {/* Stats */}
           <StatsBar analyses={currentAnalyses} />
