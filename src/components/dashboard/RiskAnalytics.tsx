@@ -122,11 +122,18 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
   const overallRisk = useMemo(() =>
     Math.round(riskFactors.reduce((s, f) => s + f.risk, 0) / riskFactors.length), [riskFactors]);
 
-  // ===== 2. MONTE CARLO SIMULATION =====
+  // ===== 2. MONTE CARLO SIMULATION (portfolio + per-holding) =====
   const monteCarloData = useMemo(() => {
     const SIMS = 500;
     const MONTHS = 12;
     const rng = seededRandom(42);
+
+    // Per-holding Monte Carlo data
+    const perHolding: Array<{
+      symbol: string; company_name: string; marketValue: number;
+      expectedReturn: number; var95: number; probLoss: number;
+      p5: number; p50: number; p95: number; action: string; actionColor: string; reason: string;
+    }> = [];
 
     // Calculate portfolio expected return & volatility from AI data
     let expectedAnnualReturn = 0;
@@ -143,9 +150,9 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
     if (totalWeight < 0.5) expectedAnnualReturn = 0.08;
 
     const monthlyReturn = expectedAnnualReturn / 12;
-    const monthlyVol = Math.abs(monthlyReturn) * 2 + 0.03; // Rough volatility estimate
+    const monthlyVol = Math.abs(monthlyReturn) * 2 + 0.03;
 
-    // Run simulations
+    // Run portfolio simulations
     const paths: number[][] = [];
     for (let s = 0; s < SIMS; s++) {
       const path = [totalValue];
@@ -158,7 +165,63 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
       paths.push(path);
     }
 
-    // Calculate percentiles at each month
+    // Per-holding simulations
+    holdingsWithValue.forEach((h) => {
+      const analysis = analyses[h.symbol];
+      const target1y = analysis?.prediction?.priceTarget1y;
+      const holdingReturn = (target1y && h.livePrice > 0) ? (target1y / h.livePrice - 1) : 0.08;
+      const hMonthlyRet = holdingReturn / 12;
+      const hMonthlyVol = Math.abs(hMonthlyRet) * 2.5 + 0.04; // individual stocks are more volatile
+      const hRng = seededRandom(h.symbol.split('').reduce((a, c) => a + c.charCodeAt(0), 0));
+
+      const finals: number[] = [];
+      for (let s = 0; s < SIMS; s++) {
+        let val = h.marketValue;
+        for (let m = 1; m <= MONTHS; m++) {
+          val = val * (1 + hMonthlyRet + normalRandom(hRng) * hMonthlyVol);
+        }
+        finals.push(Math.max(0, val));
+      }
+      const sorted = [...finals].sort((a, b) => a - b);
+      const hVar95 = h.marketValue - sorted[Math.floor(SIMS * 0.05)];
+      const hProbLoss = finals.filter(v => v < h.marketValue).length / SIMS * 100;
+      const hP5 = sorted[Math.floor(SIMS * 0.05)];
+      const hP50 = sorted[Math.floor(SIMS * 0.5)];
+      const hP95 = sorted[Math.floor(SIMS * 0.95)];
+
+      // Determine action
+      const rec = analysis?.prediction?.recommendation;
+      const sentiment = analysis?.sentiment;
+      let action = "Hold";
+      let actionColor = "text-warning";
+      let reason = "Moderate risk/reward profile";
+
+      if (rec === "sell" || (hProbLoss > 60 && sentiment === "bearish")) {
+        action = "Reduce / Exit";
+        actionColor = "text-loss";
+        reason = hProbLoss > 60 ? `${hProbLoss.toFixed(0)}% chance of loss — high downside risk` : "AI recommends selling";
+      } else if (rec === "buy" && hProbLoss < 35) {
+        action = "Add More";
+        actionColor = "text-gain";
+        reason = `Only ${hProbLoss.toFixed(0)}% loss probability — strong upside potential`;
+      } else if (hProbLoss > 50) {
+        action = "Watch Closely";
+        actionColor = "text-warning";
+        reason = `${hProbLoss.toFixed(0)}% loss probability — monitor for exit signals`;
+      } else if (hProbLoss < 30 && holdingReturn > 0.1) {
+        action = "Strong Hold";
+        actionColor = "text-gain";
+        reason = `Low risk (${hProbLoss.toFixed(0)}% loss prob) with ${(holdingReturn * 100).toFixed(0)}% expected return`;
+      }
+
+      perHolding.push({
+        symbol: h.symbol, company_name: h.company_name, marketValue: h.marketValue,
+        expectedReturn: holdingReturn, var95: hVar95, probLoss: hProbLoss,
+        p5: hP5, p50: hP50, p95: hP95, action, actionColor, reason,
+      });
+    });
+
+    // Portfolio percentiles
     const percentileData = [];
     for (let m = 0; m <= MONTHS; m++) {
       const values = paths.map((p) => p[m]).sort((a, b) => a - b);
@@ -172,21 +235,27 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
       });
     }
 
-    // VaR & max drawdown
     const finalValues = paths.map((p) => p[MONTHS]);
     const sortedFinals = [...finalValues].sort((a, b) => a - b);
     const var95 = totalValue - sortedFinals[Math.floor(SIMS * 0.05)];
     const cvar95 = totalValue - sortedFinals.slice(0, Math.floor(SIMS * 0.05)).reduce((s, v) => s + v, 0) / Math.floor(SIMS * 0.05);
-
-    // Sharpe ratio approximation
     const avgReturn = finalValues.reduce((s, v) => s + (v / totalValue - 1), 0) / SIMS;
     const stdDev = Math.sqrt(finalValues.reduce((s, v) => s + Math.pow(v / totalValue - 1 - avgReturn, 2), 0) / SIMS);
-    const sharpe = stdDev > 0 ? (avgReturn - 0.04) / stdDev : 0; // 4% risk-free rate
-
-    // Probability of loss
+    const sharpe = stdDev > 0 ? (avgReturn - 0.04) / stdDev : 0;
     const probLoss = finalValues.filter((v) => v < totalValue).length / SIMS * 100;
 
-    return { percentileData, var95, cvar95, sharpe, probLoss, expectedAnnualReturn };
+    // Generate action summary
+    const reduceHoldings = perHolding.filter(h => h.action === "Reduce / Exit");
+    const addHoldings = perHolding.filter(h => h.action === "Add More");
+    const watchHoldings = perHolding.filter(h => h.action === "Watch Closely");
+    const summaryLines: string[] = [];
+    if (reduceHoldings.length > 0) summaryLines.push(`🔴 Consider reducing: ${reduceHoldings.map(h => h.symbol).join(", ")}`);
+    if (watchHoldings.length > 0) summaryLines.push(`🟡 Monitor closely: ${watchHoldings.map(h => h.symbol).join(", ")}`);
+    if (addHoldings.length > 0) summaryLines.push(`🟢 Opportunities to add: ${addHoldings.map(h => h.symbol).join(", ")}`);
+    if (probLoss > 40) summaryLines.push(`⚠️ Portfolio has ${probLoss.toFixed(0)}% chance of loss over 12 months — consider diversifying`);
+    else if (probLoss < 25) summaryLines.push(`✅ Portfolio is well-positioned with only ${probLoss.toFixed(0)}% loss probability`);
+
+    return { percentileData, var95, cvar95, sharpe, probLoss, expectedAnnualReturn, perHolding, summaryLines };
   }, [holdingsWithValue, analyses, totalValue]);
 
   // ===== 3. CORRELATION & CONCENTRATION =====
