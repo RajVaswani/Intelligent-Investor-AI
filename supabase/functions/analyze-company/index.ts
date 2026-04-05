@@ -173,7 +173,8 @@ Respond with this JSON structure ONLY:
   "priceTarget1y": <predicted price 1 year>,
   "recommendation": "<buy|hold|sell>",
   "confidenceScore": <0-100>,
-  "predictionReasoning": "<6-8 sentences: explain prediction rationale incorporating BOTH micro fundamentals AND macro forces. Cite specific catalysts, risks, valuation metrics, geopolitical factors, and macro trends that drive the price targets>"
+  "predictionReasoning": "<6-8 sentences: explain prediction rationale incorporating BOTH micro fundamentals AND macro forces. Cite specific catalysts, risks, valuation metrics, geopolitical factors, and macro trends that drive the price targets>",
+  "stockSplitCaveat": "<If this stock has had any stock splits (e.g. NVDA 10:1 in June 2024, TSLA 3:1 in 2022, AMZN 20:1 in 2022, AAPL 4:1 in 2020, GOOG 20:1 in 2022, etc.), provide a clear caveat explaining the split date, ratio, and how it affects historical price comparisons and current price levels. Note that all price targets above are POST-SPLIT prices. If no recent split occurred, return null>"
 }`
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
