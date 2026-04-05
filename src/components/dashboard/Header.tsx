@@ -34,6 +34,15 @@ export function Header({ onRefreshAll, isRefreshing }: HeaderProps) {
               {isRefreshing ? "Analyzing..." : "Refresh All"}
             </button>
           )}
+          {user && isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80"
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </button>
+          )}
           <button
             onClick={() => navigate(user ? "/dashboard" : "/auth")}
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
