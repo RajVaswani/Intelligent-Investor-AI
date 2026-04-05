@@ -234,6 +234,13 @@ Respond with this JSON structure ONLY:
         news_digest: analysis.newsDigest || '',
         strengths: analysis.strengths || [],
         risks: analysis.risks || [],
+        price_target_1w: analysis.priceTarget1w || null,
+        price_target_1m: analysis.priceTarget1m || null,
+        price_target_3m: analysis.priceTarget3m || null,
+        price_target_1y: analysis.priceTarget1y || null,
+        recommendation: analysis.recommendation || null,
+        confidence_score: analysis.confidenceScore || null,
+        prediction_reasoning: analysis.predictionReasoning || null,
         raw_scraped_data: {
           detailedAnalysis: analysis.detailedAnalysis || '',
           competitivePosition: analysis.competitivePosition || '',
