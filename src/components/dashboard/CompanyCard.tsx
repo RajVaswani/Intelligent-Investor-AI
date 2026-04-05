@@ -22,7 +22,7 @@ export function CompanyCard({ company, analysis, onAnalyze, onClick, isAnalyzing
   return (
     <div
       className="group cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
-      onClick={() => analysis && onClick(company)}
+      onClick={() => onClick(company)}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
