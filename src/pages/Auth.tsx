@@ -62,7 +62,7 @@ export default function Auth() {
         return;
       }
       if (result.redirected) return;
-      navigate("/dashboard");
+      navigate("/market");
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
