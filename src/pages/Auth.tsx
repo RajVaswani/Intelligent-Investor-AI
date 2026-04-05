@@ -20,12 +20,8 @@ export default function Auth() {
   useEffect(() => {
     if (!authLoading && user) navigate("/market", { replace: true });
   }, [user, authLoading, navigate]);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
