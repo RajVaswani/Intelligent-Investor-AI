@@ -85,7 +85,7 @@ export function RiskAnalytics({ holdings, analyses, livePrices: externalPrices }
     const sectorExposure: Record<string, number> = {};
     let bearishWeight = 0;
     let avgConfidence = 0;
-    let confidenceCount = 0;
+    let _confidenceCount = 0;
 
     holdingsWithValue.forEach((h) => {
       const sector = h.sector || "Unknown";
