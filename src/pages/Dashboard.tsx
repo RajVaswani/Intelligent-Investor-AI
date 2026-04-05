@@ -203,9 +203,9 @@ export default function Dashboard() {
     setIbkrSyncing(true);
     toast({ title: "Fetching from IBKR...", description: "Step 1: Requesting Flex Query report..." });
     try {
-      // Step 1: Request the report
+      // Step 1: Request the report (credentials read server-side)
       const { data: reqData, error: reqError } = await supabase.functions.invoke("ibkr-portfolio", {
-        body: { token: ibkrToken, queryId: ibkrQueryId, userId: user.id, step: "request" },
+        body: { userId: user.id, step: "request" },
       });
       if (reqError) throw new Error(reqError.message);
       if (!reqData?.success) throw new Error(reqData?.error || "Failed to request Flex report");
@@ -213,7 +213,7 @@ export default function Dashboard() {
       const refCode = reqData.referenceCode;
       toast({ title: "Report requested", description: "Waiting for IBKR to generate report..." });
 
-      // Step 2: Poll for results (client-side polling avoids edge function timeout)
+      // Step 2: Poll for results
       let attempts = 0;
       const maxAttempts = 10;
       while (attempts < maxAttempts) {
@@ -221,7 +221,7 @@ export default function Dashboard() {
         attempts++;
 
         const { data: fetchData, error: fetchError } = await supabase.functions.invoke("ibkr-portfolio", {
-          body: { token: ibkrToken, userId: user.id, step: "fetch", referenceCode: refCode },
+          body: { userId: user.id, step: "fetch", referenceCode: refCode },
         });
         if (fetchError) throw new Error(fetchError.message);
         if (!fetchData?.success) throw new Error(fetchData?.error || "Failed to fetch report");
