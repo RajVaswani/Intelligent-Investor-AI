@@ -32,6 +32,15 @@ export async function analyzeCompany(company: Company): Promise<AnalysisResult> 
     risks: d.risks || [],
     citations: d.citations || [],
     lastUpdated: d.lastUpdated || new Date().toISOString(),
+    prediction: {
+      priceTarget1w: d.priceTarget1w || null,
+      priceTarget1m: d.priceTarget1m || null,
+      priceTarget3m: d.priceTarget3m || null,
+      priceTarget1y: d.priceTarget1y || null,
+      recommendation: d.recommendation || null,
+      confidenceScore: d.confidenceScore || null,
+      predictionReasoning: d.predictionReasoning || "",
+    },
   };
 }
 
@@ -69,6 +78,15 @@ export async function getCachedAnalyses(etf: string): Promise<AnalysisResult[]> 
       risks: row.risks || [],
       citations: raw.citations || [],
       lastUpdated: row.updated_at,
+      prediction: {
+        priceTarget1w: (row as any).price_target_1w || null,
+        priceTarget1m: (row as any).price_target_1m || null,
+        priceTarget3m: (row as any).price_target_3m || null,
+        priceTarget1y: (row as any).price_target_1y || null,
+        recommendation: (row as any).recommendation || null,
+        confidenceScore: (row as any).confidence_score || null,
+        predictionReasoning: (row as any).prediction_reasoning || "",
+      },
     };
   });
 }
@@ -108,5 +126,14 @@ export async function getCachedAnalysis(symbol: string): Promise<AnalysisResult 
     risks: data.risks || [],
     citations: raw.citations || [],
     lastUpdated: data.updated_at,
+    prediction: {
+      priceTarget1w: (data as any).price_target_1w || null,
+      priceTarget1m: (data as any).price_target_1m || null,
+      priceTarget3m: (data as any).price_target_3m || null,
+      priceTarget1y: (data as any).price_target_1y || null,
+      recommendation: (data as any).recommendation || null,
+      confidenceScore: (data as any).confidence_score || null,
+      predictionReasoning: (data as any).prediction_reasoning || "",
+    },
   };
 }

@@ -17,13 +17,20 @@ export type Database = {
       stock_analyses: {
         Row: {
           company_name: string
+          confidence_score: number | null
           created_at: string
           etf: string
           financial_highlights: string | null
           id: string
           news_digest: string | null
           overall_score: number
+          prediction_reasoning: string | null
+          price_target_1m: number | null
+          price_target_1w: number | null
+          price_target_1y: number | null
+          price_target_3m: number | null
           raw_scraped_data: Json | null
+          recommendation: string | null
           risks: string[] | null
           sector: string
           sentiment: string
@@ -35,13 +42,20 @@ export type Database = {
         }
         Insert: {
           company_name: string
+          confidence_score?: number | null
           created_at?: string
           etf: string
           financial_highlights?: string | null
           id?: string
           news_digest?: string | null
           overall_score: number
+          prediction_reasoning?: string | null
+          price_target_1m?: number | null
+          price_target_1w?: number | null
+          price_target_1y?: number | null
+          price_target_3m?: number | null
           raw_scraped_data?: Json | null
+          recommendation?: string | null
           risks?: string[] | null
           sector: string
           sentiment: string
@@ -53,13 +67,20 @@ export type Database = {
         }
         Update: {
           company_name?: string
+          confidence_score?: number | null
           created_at?: string
           etf?: string
           financial_highlights?: string | null
           id?: string
           news_digest?: string | null
           overall_score?: number
+          prediction_reasoning?: string | null
+          price_target_1m?: number | null
+          price_target_1w?: number | null
+          price_target_1y?: number | null
+          price_target_3m?: number | null
           raw_scraped_data?: Json | null
+          recommendation?: string | null
           risks?: string[] | null
           sector?: string
           sentiment?: string

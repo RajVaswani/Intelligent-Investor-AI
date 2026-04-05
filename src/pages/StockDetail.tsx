@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, RefreshCw, ExternalLink, Globe, FileText, Newspaper, Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, Target, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, ExternalLink, Globe, FileText, Newspaper, Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, Target, Users, Loader2, BarChart3 } from "lucide-react";
 import { findCompany, getSentimentColor, getScoreColor } from "@/lib/stockData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
@@ -134,7 +134,59 @@ export default function StockDetail() {
               <p className="mt-3 text-sm leading-relaxed text-foreground">{analysis.summary}</p>
             </div>
 
-            {/* Analysis Grid */}
+            {/* Prediction Section */}
+            {analysis.prediction?.recommendation && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    <h2 className="text-lg font-semibold text-foreground">AI Prediction</h2>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`rounded-lg px-3 py-1.5 text-sm font-bold uppercase ${
+                      analysis.prediction.recommendation === "buy" ? "bg-gain/15 text-gain border border-gain/20" :
+                      analysis.prediction.recommendation === "sell" ? "bg-loss/15 text-loss border border-loss/20" :
+                      "bg-warning/15 text-warning border border-warning/20"
+                    }`}>
+                      {analysis.prediction.recommendation}
+                    </span>
+                    {analysis.prediction.confidenceScore && (
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Confidence</p>
+                        <p className={`text-sm font-bold ${
+                          analysis.prediction.confidenceScore >= 70 ? "text-gain" :
+                          analysis.prediction.confidenceScore >= 40 ? "text-warning" : "text-loss"
+                        }`}>{analysis.prediction.confidenceScore}%</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Price Targets Grid */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: "1 Week", value: analysis.prediction.priceTarget1w },
+                    { label: "1 Month", value: analysis.prediction.priceTarget1m },
+                    { label: "3 Months", value: analysis.prediction.priceTarget3m },
+                    { label: "1 Year", value: analysis.prediction.priceTarget1y },
+                  ].map((target) => (
+                    <div key={target.label} className="rounded-lg border border-border bg-secondary/30 p-3 text-center">
+                      <p className="text-[10px] text-muted-foreground">{target.label}</p>
+                      <p className="mt-1 text-lg font-bold text-foreground">
+                        {target.value ? target.value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Prediction Reasoning */}
+                {analysis.prediction.predictionReasoning && (
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                    {analysis.prediction.predictionReasoning}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid gap-6 lg:grid-cols-2">
               <AnalysisSection icon={<Globe className="h-5 w-5 text-primary" />} title="Website & Digital Insights" content={analysis.websiteInsights} />
               <AnalysisSection icon={<FileText className="h-5 w-5 text-gain" />} title="Financial Highlights" content={analysis.financialHighlights} />

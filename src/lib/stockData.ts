@@ -15,6 +15,16 @@ export interface Citation {
   source: string;
 }
 
+export interface PredictionData {
+  priceTarget1w: number | null;
+  priceTarget1m: number | null;
+  priceTarget3m: number | null;
+  priceTarget1y: number | null;
+  recommendation: "buy" | "hold" | "sell" | null;
+  confidenceScore: number | null;
+  predictionReasoning: string;
+}
+
 export interface AnalysisResult {
   id: string;
   company: Company;
@@ -31,6 +41,7 @@ export interface AnalysisResult {
   risks: string[];
   citations: Citation[];
   lastUpdated: string;
+  prediction?: PredictionData;
   isLoading?: boolean;
 }
 
