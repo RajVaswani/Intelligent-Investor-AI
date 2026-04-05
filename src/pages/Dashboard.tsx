@@ -40,8 +40,10 @@ export default function Dashboard() {
   const [analyzingSymbols, setAnalyzingSymbols] = useState<Set<string>>(new Set());
   const [showAddForm, setShowAddForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [ibkrUrl, setIbkrUrl] = useState("");
+  const [ibkrToken, setIbkrToken] = useState("");
+  const [ibkrQueryId, setIbkrQueryId] = useState("");
   const [ibkrLoading, setIbkrLoading] = useState(false);
+  const [ibkrSyncing, setIbkrSyncing] = useState(false);
   const [newHolding, setNewHolding] = useState({ symbol: "", company_name: "", quantity: "", avg_price: "", sector: "", exchange: "" });
 
   // Load holdings
