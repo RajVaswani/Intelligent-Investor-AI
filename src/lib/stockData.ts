@@ -51,6 +51,7 @@ export interface AnalysisResult {
   citations: Citation[];
   lastUpdated: string;
   prediction?: PredictionData;
+  macro?: MacroAnalysis;
   isLoading?: boolean;
 }
 
