@@ -18,6 +18,8 @@ export default function PortfolioHoldingDetail() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [prevClose, setPrevClose] = useState<number | null>(null);
   const [holding, setHolding] = useState<{
     symbol: string;
     company_name: string;
