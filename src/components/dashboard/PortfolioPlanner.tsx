@@ -35,7 +35,7 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   const [timeHorizon, setTimeHorizon] = useState("12");
   const [showPlanner, setShowPlanner] = useState(false);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
-  const [pricesLoading, setPricesLoading] = useState(false);
+  const [_pricesLoading, setPricesLoading] = useState(false);
 
   // Fetch live prices for all holdings
   useEffect(() => {
