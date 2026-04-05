@@ -34,30 +34,57 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
   const [targetROI, setTargetROI] = useState("");
   const [timeHorizon, setTimeHorizon] = useState("12");
   const [showPlanner, setShowPlanner] = useState(false);
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [pricesLoading, setPricesLoading] = useState(false);
 
-  // Calculate P&L per holding using AI price targets
+  // Fetch live prices for all holdings
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    setPricesLoading(true);
+    const fetchPrices = async () => {
+      const prices: Record<string, number> = {};
+      await Promise.all(
+        holdings.map(async (h) => {
+          try {
+            const yahooSymbol = h.exchange === "NSE" ? `${h.symbol}.NS` : h.symbol;
+            const { data, error } = await supabase.functions.invoke("stock-data", {
+              body: { symbol: yahooSymbol, range: "1d", interval: "1d" },
+            });
+            if (!error && data?.success && data.data?.regularMarketPrice) {
+              prices[h.symbol] = data.data.regularMarketPrice;
+            }
+          } catch {
+            // skip failed fetches
+          }
+        })
+      );
+      setLivePrices(prices);
+      setPricesLoading(false);
+    };
+    fetchPrices();
+  }, [holdings]);
+
+  // Calculate P&L per holding using live market prices
   const holdingsPnL = useMemo(() => {
     return holdings.map((h) => {
       const analysis = analyses[h.symbol];
       const costBasis = h.quantity * h.avg_price;
-      const target1w = analysis?.prediction?.priceTarget1w;
-      const target1m = analysis?.prediction?.priceTarget1m;
       const target1y = analysis?.prediction?.priceTarget1y;
-      // Use 1-week target as nearest proxy; if unavailable, mark as no data
-      const hasEstimate = !!target1w;
-      const currentEstimate = target1w || h.avg_price;
-      const estimatedValue = h.quantity * currentEstimate;
-      const unrealizedPnL = hasEstimate ? estimatedValue - costBasis : 0;
-      const pnlPercent = hasEstimate && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
+      const livePrice = livePrices[h.symbol];
+      const hasLivePrice = !!livePrice;
+      const currentPrice = livePrice || h.avg_price;
+      const marketValue = h.quantity * currentPrice;
+      const unrealizedPnL = hasLivePrice ? marketValue - costBasis : 0;
+      const pnlPercent = hasLivePrice && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
       const projectedValue1y = target1y ? h.quantity * target1y : null;
       const projectedPnL1y = projectedValue1y ? projectedValue1y - costBasis : null;
 
       return {
         ...h,
         costBasis,
-        hasEstimate,
-        currentEstimate,
-        estimatedValue,
+        hasLivePrice,
+        currentPrice,
+        marketValue,
         unrealizedPnL,
         pnlPercent,
         projectedValue1y,
@@ -67,7 +94,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
         sentiment: analysis?.sentiment || null,
         topRisk: analysis?.risks?.[0] || null,
       };
-    }).sort((a, b) => b.estimatedValue - a.estimatedValue);
+    }).sort((a, b) => b.marketValue - a.marketValue);
   }, [holdings, analyses]);
 
   // Portfolio-level P&L
