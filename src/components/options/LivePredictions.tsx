@@ -1,51 +1,100 @@
 import { useState, useEffect, useMemo } from "react";
 import type { IntradayData } from "@/lib/api/optionsData";
-import { computeLiveSignals, type LiveSignals, type Signal } from "@/lib/signalEngine";
-import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import type { AnalysisResult } from "@/lib/stockData";
+import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
+import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain } from "lucide-react";
 
 interface Props {
   data: IntradayData | null;
   symbol: string;
+  analysis?: AnalysisResult | null;
 }
 
 const signalColor: Record<Signal, string> = {
   "STRONG BUY": "text-chart-2",
-  "BUY": "text-chart-2",
-  "HOLD": "text-chart-4",
-  "SELL": "text-destructive",
+  BUY: "text-chart-2",
+  HOLD: "text-chart-4",
+  SELL: "text-destructive",
   "STRONG SELL": "text-destructive",
 };
 
 const signalBg: Record<Signal, string> = {
   "STRONG BUY": "bg-chart-2/20 border-chart-2/40",
-  "BUY": "bg-chart-2/10 border-chart-2/30",
-  "HOLD": "bg-chart-4/10 border-chart-4/30",
-  "SELL": "bg-destructive/10 border-destructive/30",
+  BUY: "bg-chart-2/10 border-chart-2/30",
+  HOLD: "bg-chart-4/10 border-chart-4/30",
+  SELL: "bg-destructive/10 border-destructive/30",
   "STRONG SELL": "bg-destructive/20 border-destructive/40",
 };
 
 const signalIcon: Record<Signal, React.ReactNode> = {
   "STRONG BUY": <ArrowUp className="h-5 w-5 text-chart-2" />,
-  "BUY": <ArrowUp className="h-4 w-4 text-chart-2" />,
-  "HOLD": <Minus className="h-4 w-4 text-chart-4" />,
-  "SELL": <ArrowDown className="h-4 w-4 text-destructive" />,
+  BUY: <ArrowUp className="h-4 w-4 text-chart-2" />,
+  HOLD: <Minus className="h-4 w-4 text-chart-4" />,
+  SELL: <ArrowDown className="h-4 w-4 text-destructive" />,
   "STRONG SELL": <ArrowDown className="h-5 w-5 text-destructive" />,
 };
 
-export function LivePredictions({ data, symbol }: Props) {
+const impactIcon = {
+  bullish: <TrendingUp className="h-3.5 w-3.5 text-chart-2" />,
+  bearish: <TrendingDown className="h-3.5 w-3.5 text-destructive" />,
+  neutral: <Minus className="h-3.5 w-3.5 text-muted-foreground" />,
+};
+
+const impactColor = {
+  bullish: "text-chart-2",
+  bearish: "text-destructive",
+  neutral: "text-muted-foreground",
+};
+
+const impactBg = {
+  bullish: "border-chart-2/20 bg-chart-2/5",
+  bearish: "border-destructive/20 bg-destructive/5",
+  neutral: "border-border bg-muted/30",
+};
+
+const factorIcons: Record<string, React.ReactNode> = {
+  "Financial Highlights": <BarChart3 className="h-3.5 w-3.5" />,
+  "News Digest": <Newspaper className="h-3.5 w-3.5" />,
+  "Key Strengths": <TrendingUp className="h-3.5 w-3.5" />,
+  "Key Risks": <AlertTriangle className="h-3.5 w-3.5" />,
+  "Geopolitical Risk": <Globe className="h-3.5 w-3.5" />,
+  "Controversy Scanner": <Shield className="h-3.5 w-3.5" />,
+  "Macro Economics": <BarChart3 className="h-3.5 w-3.5" />,
+  "Sector Winds": <TrendingUp className="h-3.5 w-3.5" />,
+  "Regional Sentiment": <Globe className="h-3.5 w-3.5" />,
+  "Media Manipulation": <Shield className="h-3.5 w-3.5" />,
+};
+
+export function LivePredictions({ data, symbol, analysis }: Props) {
   const [tick, setTick] = useState(0);
 
-  // Force re-render every second to show fresh timestamp
   useEffect(() => {
-    const i = setInterval(() => setTick(t => t + 1), 1000);
+    const i = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(i);
   }, []);
 
+  const analysisInput: AnalysisInput | null = useMemo(() => {
+    if (!analysis) return null;
+    return {
+      overallScore: analysis.overallScore,
+      sentiment: analysis.sentiment,
+      summary: analysis.summary,
+      financialHighlights: analysis.financialHighlights,
+      newsDigest: analysis.newsDigest,
+      recommendation: analysis.prediction?.recommendation,
+      confidenceScore: analysis.prediction?.confidenceScore,
+      predictionReasoning: analysis.prediction?.predictionReasoning,
+      macro: analysis.macro,
+      strengths: analysis.strengths,
+      risks: analysis.risks,
+    };
+  }, [analysis]);
+
   const signals = useMemo(() => {
     if (!data?.candles) return null;
-    return computeLiveSignals(data.candles);
+    return computeLiveSignals(data.candles, analysisInput);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, tick]);
+  }, [data, analysisInput, tick]);
 
   if (!signals) {
     return (
@@ -57,7 +106,7 @@ export function LivePredictions({ data, symbol }: Props) {
     );
   }
 
-  const overallSignal = signals.predictions[2]?.signal || "HOLD"; // 3-min as primary
+  const overallSignal = signals.predictions[2]?.signal || "HOLD";
 
   return (
     <div className="space-y-4">
@@ -72,10 +121,13 @@ export function LivePredictions({ data, symbol }: Props) {
           <span className="text-xs text-muted-foreground">
             Updated {new Date(signals.updatedAt).toLocaleTimeString()}
           </span>
+          {analysisInput && (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+              Micro/Macro Active
+            </span>
+          )}
         </div>
-        <span className="text-xs text-muted-foreground">
-          Refreshing every 1s
-        </span>
+        <span className="text-xs text-muted-foreground">Refreshing every 1s</span>
       </div>
 
       {/* Big price + overall signal */}
@@ -83,6 +135,23 @@ export function LivePredictions({ data, symbol }: Props) {
         <div>
           <div className="text-sm text-muted-foreground">{symbol}</div>
           <div className="text-4xl font-bold font-mono text-foreground">${signals.currentPrice.toFixed(2)}</div>
+          {analysisInput && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className={analysisInput.sentiment === "bullish" ? "text-chart-2" : analysisInput.sentiment === "bearish" ? "text-destructive" : ""}>
+                {analysisInput.sentiment}
+              </span>
+              <span>·</span>
+              <span>AI Score {analysisInput.overallScore}/100</span>
+              {analysisInput.recommendation && (
+                <>
+                  <span>·</span>
+                  <span className={analysisInput.recommendation === "buy" ? "text-chart-2 font-medium uppercase" : analysisInput.recommendation === "sell" ? "text-destructive font-medium uppercase" : "font-medium uppercase"}>
+                    {analysisInput.recommendation}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className={`flex flex-col items-center gap-1 rounded-xl border p-4 ${signalBg[overallSignal]}`}>
           {signalIcon[overallSignal]}
@@ -95,12 +164,10 @@ export function LivePredictions({ data, symbol }: Props) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-[10px] uppercase text-muted-foreground">RSI (14)</div>
-          <div className={`text-lg font-bold font-mono ${
-            signals.rsi > 70 ? "text-destructive" : signals.rsi < 30 ? "text-chart-2" : "text-foreground"
-          }`}>{signals.rsi.toFixed(1)}</div>
-          <div className="text-[10px] text-muted-foreground">
-            {signals.rsi > 70 ? "Overbought" : signals.rsi < 30 ? "Oversold" : "Neutral"}
+          <div className={`text-lg font-bold font-mono ${signals.rsi > 70 ? "text-destructive" : signals.rsi < 30 ? "text-chart-2" : "text-foreground"}`}>
+            {signals.rsi.toFixed(1)}
           </div>
+          <div className="text-[10px] text-muted-foreground">{signals.rsi > 70 ? "Overbought" : signals.rsi < 30 ? "Oversold" : "Neutral"}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-[10px] uppercase text-muted-foreground">VWAP</div>
@@ -136,6 +203,7 @@ export function LivePredictions({ data, symbol }: Props) {
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Zap className="h-4 w-4 text-primary" />
           Predictions by Timeframe
+          {analysisInput && <span className="text-[10px] font-normal text-muted-foreground">(Technical + Micro/Macro weighted)</span>}
         </h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {signals.predictions.map((p) => (
@@ -159,22 +227,81 @@ export function LivePredictions({ data, symbol }: Props) {
                 </div>
                 <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full transition-all ${
-                      p.confidence >= 70 ? "bg-chart-2" : p.confidence >= 40 ? "bg-chart-4" : "bg-destructive"
-                    }`}
+                    className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-chart-2" : p.confidence >= 40 ? "bg-chart-4" : "bg-destructive"}`}
                     style={{ width: `${p.confidence}%` }}
                   />
                 </div>
               </div>
+              {/* Reasoning */}
+              {p.reasoning && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{p.reasoning}</p>}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Disclaimer */}
+      {/* Macro/Micro Detail Cards */}
+      {signals.macroMicro && signals.macroMicro.details.length > 0 && (
+        <div>
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Brain className="h-4 w-4 text-primary" />
+            Micro & Macro Factors Influencing Signals
+          </h3>
+
+          {/* Score bars */}
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Sentiment Score</span>
+                <span className={`font-bold ${signals.macroMicro.sentimentScore >= 60 ? "text-chart-2" : signals.macroMicro.sentimentScore <= 40 ? "text-destructive" : "text-foreground"}`}>
+                  {signals.macroMicro.sentimentScore.toFixed(0)}/100
+                </span>
+              </div>
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className={`h-full rounded-full ${signals.macroMicro.sentimentScore >= 60 ? "bg-chart-2" : signals.macroMicro.sentimentScore <= 40 ? "bg-destructive" : "bg-chart-4"}`} style={{ width: `${signals.macroMicro.sentimentScore}%` }} />
+              </div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Macro Environment</span>
+                <span className={`font-bold ${signals.macroMicro.macroScore >= 60 ? "text-chart-2" : signals.macroMicro.macroScore <= 40 ? "text-destructive" : "text-foreground"}`}>
+                  {signals.macroMicro.macroScore.toFixed(0)}/100
+                </span>
+              </div>
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div className={`h-full rounded-full ${signals.macroMicro.macroScore >= 60 ? "bg-chart-2" : signals.macroMicro.macroScore <= 40 ? "bg-destructive" : "bg-chart-4"}`} style={{ width: `${signals.macroMicro.macroScore}%` }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Factor cards */}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {signals.macroMicro.details.map((d, i) => (
+              <div key={i} className={`rounded-lg border p-3 ${impactBg[d.impact]}`}>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className={impactColor[d.impact]}>{factorIcons[d.label] || <Brain className="h-3.5 w-3.5" />}</span>
+                  <span className="text-xs font-semibold text-foreground">{d.label}</span>
+                  <span className="ml-auto flex items-center gap-1">
+                    {impactIcon[d.impact]}
+                    <span className={`text-[10px] font-medium capitalize ${impactColor[d.impact]}`}>{d.impact}</span>
+                  </span>
+                </div>
+                <p className="text-[10px] leading-relaxed text-muted-foreground">{d.summary}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!signals.macroMicro && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+          <Brain className="mx-auto mb-1 h-5 w-5 text-muted-foreground/40" />
+          No micro/macro analysis available for {symbol}. Run analysis from the Market Dashboard to enhance predictions with fundamental + geopolitical data.
+        </div>
+      )}
+
       <p className="text-center text-[10px] text-muted-foreground">
-        Signals are computed from technical indicators (RSI, EMA 9/21, VWAP, momentum, volume). 
-        Not financial advice. Past performance does not indicate future results.
+        Signals blend technical indicators (RSI, EMA, VWAP, momentum, volume) with AI-scraped micro/macro data.
+        Not financial advice.
       </p>
     </div>
   );
