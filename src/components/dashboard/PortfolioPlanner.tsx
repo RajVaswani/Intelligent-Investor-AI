@@ -187,7 +187,7 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
           <p className="text-xl font-bold text-foreground">{formatCurrency(portfolioPnL.totalCost)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Estimated Value</p>
+          <p className="text-xs text-muted-foreground">Market Value</p>
           <p className="text-xl font-bold text-foreground">{formatCurrency(portfolioPnL.totalEstimated)}</p>
         </div>
         <div className={`rounded-xl border p-4 ${portfolioPnL.totalUnrealized >= 0 ? "border-gain/20 bg-gain/5" : "border-loss/20 bg-loss/5"}`}>
