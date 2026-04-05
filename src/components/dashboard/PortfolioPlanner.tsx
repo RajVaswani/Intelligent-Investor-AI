@@ -207,13 +207,13 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
                   </td>
                   <td className="px-4 py-2.5 text-right text-foreground">{h.quantity}</td>
                   <td className="px-4 py-2.5 text-right text-foreground">${h.avg_price.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right text-foreground">${h.currentEstimate.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{formatCurrency(h.estimatedValue)}</td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.unrealizedPnL >= 0 ? "+" : ""}{formatCurrency(h.unrealizedPnL)}
+                  <td className="px-4 py-2.5 text-right text-foreground">{h.hasEstimate ? `$${h.currentEstimate.toFixed(2)}` : "—"}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{h.hasEstimate ? formatCurrency(h.estimatedValue) : "—"}</td>
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasEstimate ? `${h.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(h.unrealizedPnL)}` : "—"}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.pnlPercent >= 0 ? "+" : ""}{h.pnlPercent.toFixed(1)}%
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasEstimate ? `${h.pnlPercent >= 0 ? "+" : ""}${h.pnlPercent.toFixed(1)}%` : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     {h.recommendation && (
