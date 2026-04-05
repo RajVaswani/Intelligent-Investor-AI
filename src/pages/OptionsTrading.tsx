@@ -68,7 +68,7 @@ export default function OptionsTrading() {
         ) : (
           <div className="space-y-4">
             {/* TradingView chart — full width */}
-            <TradingViewChart symbol={tvSymbol} height={550} interval="1" />
+            <TradingViewChart symbol={tvSymbol} height={500} interval="1" />
             {/* Live signals below */}
             <LivePredictions data={intradayData} symbol={symbol} />
           </div>
