@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Company, AnalysisResult } from "@/lib/stockData";
+import type { Company, AnalysisResult, MacroAnalysis } from "@/lib/stockData";
+
+function extractMacro(row: any): MacroAnalysis {
+  return {
+    geopoliticalAnalysis: row.geopolitical_analysis || row.geopoliticalAnalysis || "",
+    controversyScanner: row.controversy_scanner || row.controversyScanner || "",
+    macroEconomicFactors: row.macro_economic_factors || row.macroEconomicFactors || "",
+    sectorTailwindsHeadwinds: row.sector_tailwinds_headwinds || row.sectorTailwindsHeadwinds || "",
+    regionalSentiment: row.regional_sentiment || row.regionalSentiment || "",
+    mediaManipulationCheck: row.media_manipulation_check || row.mediaManipulationCheck || "",
+  };
+}
 
 export async function analyzeCompany(company: Company): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-company", {
