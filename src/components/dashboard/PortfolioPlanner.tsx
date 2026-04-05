@@ -95,7 +95,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
         topRisk: analysis?.risks?.[0] || null,
       };
     }).sort((a, b) => b.marketValue - a.marketValue);
-  }, [holdings, analyses]);
+  }, [holdings, analyses, livePrices]);
 
   // Portfolio-level P&L
   const portfolioPnL = useMemo(() => {
