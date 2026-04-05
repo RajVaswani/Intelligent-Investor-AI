@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      stock_analyses: {
+        Row: {
+          company_name: string
+          created_at: string
+          etf: string
+          financial_highlights: string | null
+          id: string
+          news_digest: string | null
+          overall_score: number
+          raw_scraped_data: Json | null
+          risks: string[] | null
+          sector: string
+          sentiment: string
+          strengths: string[] | null
+          summary: string
+          symbol: string
+          updated_at: string
+          website_insights: string | null
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          etf: string
+          financial_highlights?: string | null
+          id?: string
+          news_digest?: string | null
+          overall_score: number
+          raw_scraped_data?: Json | null
+          risks?: string[] | null
+          sector: string
+          sentiment: string
+          strengths?: string[] | null
+          summary: string
+          symbol: string
+          updated_at?: string
+          website_insights?: string | null
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          etf?: string
+          financial_highlights?: string | null
+          id?: string
+          news_digest?: string | null
+          overall_score?: number
+          raw_scraped_data?: Json | null
+          risks?: string[] | null
+          sector?: string
+          sentiment?: string
+          strengths?: string[] | null
+          summary?: string
+          symbol?: string
+          updated_at?: string
+          website_insights?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
