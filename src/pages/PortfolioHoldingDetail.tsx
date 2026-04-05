@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, RefreshCw, ExternalLink, Globe, FileText, Newspaper, Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, Target, Users, Loader2, BarChart3, DollarSign } from "lucide-react";
+import { ArrowLeft, RefreshCw, ExternalLink, Globe, FileText, Newspaper, Shield, AlertTriangle, TrendingUp, TrendingDown, Minus, Target, Users, Loader2, BarChart3 } from "lucide-react";
 import { getSentimentColor, getScoreColor } from "@/lib/stockData";
 import type { AnalysisResult, Company } from "@/lib/stockData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
