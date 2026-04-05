@@ -39,12 +39,15 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
     return holdings.map((h) => {
       const analysis = analyses[h.symbol];
       const costBasis = h.quantity * h.avg_price;
-      const target1y = analysis?.prediction?.priceTarget1y;
+      const target1w = analysis?.prediction?.priceTarget1w;
       const target1m = analysis?.prediction?.priceTarget1m;
-      const currentEstimate = target1m || h.avg_price;
+      const target1y = analysis?.prediction?.priceTarget1y;
+      // Use 1-week target as nearest proxy; if unavailable, mark as no data
+      const hasEstimate = !!target1w;
+      const currentEstimate = target1w || h.avg_price;
       const estimatedValue = h.quantity * currentEstimate;
-      const unrealizedPnL = estimatedValue - costBasis;
-      const pnlPercent = costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
+      const unrealizedPnL = hasEstimate ? estimatedValue - costBasis : 0;
+      const pnlPercent = hasEstimate && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
       const projectedValue1y = target1y ? h.quantity * target1y : null;
       const projectedPnL1y = projectedValue1y ? projectedValue1y - costBasis : null;
 
