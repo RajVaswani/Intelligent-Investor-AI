@@ -89,6 +89,7 @@ export async function getCachedAnalyses(etf: string): Promise<AnalysisResult[]> 
       strengths: row.strengths || [],
       risks: row.risks || [],
       citations: raw.citations || [],
+      stockSplitCaveat: raw.stockSplitCaveat || null,
       lastUpdated: row.updated_at,
       prediction: {
         priceTarget1w: (row as any).price_target_1w || null,
@@ -138,6 +139,7 @@ export async function getCachedAnalysis(symbol: string): Promise<AnalysisResult 
     strengths: data.strengths || [],
     risks: data.risks || [],
     citations: raw.citations || [],
+    stockSplitCaveat: raw.stockSplitCaveat || null,
     lastUpdated: data.updated_at,
     prediction: {
       priceTarget1w: (data as any).price_target_1w || null,
