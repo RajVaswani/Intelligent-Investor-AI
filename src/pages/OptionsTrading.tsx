@@ -63,6 +63,23 @@ export default function OptionsTrading() {
     loadData(symbol);
   }, [symbol, loadData]);
 
+  // 1-second live refresh for intraday + options chain
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const [chain, intraday] = await Promise.all([
+          fetchOptionsChain(symbol),
+          fetchIntradayData(symbol),
+        ]);
+        if (chain) setOptionsData(chain);
+        if (intraday) setIntradayData(intraday);
+      } catch {
+        // silent refresh failure
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [symbol]);
+
   const handleSymbolChange = (sym: string) => {
     setSearchParams({ symbol: sym });
   };
