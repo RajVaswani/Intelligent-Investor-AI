@@ -29,7 +29,7 @@ interface ProjectionPoint {
   invested: number;
 }
 
-export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPlannerProps) {
+export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) {
   const [monthlyInvestment, setMonthlyInvestment] = useState("");
   const [targetROI, setTargetROI] = useState("");
   const [timeHorizon, setTimeHorizon] = useState("12");
