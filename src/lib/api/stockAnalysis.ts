@@ -126,5 +126,14 @@ export async function getCachedAnalysis(symbol: string): Promise<AnalysisResult 
     risks: data.risks || [],
     citations: raw.citations || [],
     lastUpdated: data.updated_at,
+    prediction: {
+      priceTarget1w: (data as any).price_target_1w || null,
+      priceTarget1m: (data as any).price_target_1m || null,
+      priceTarget3m: (data as any).price_target_3m || null,
+      priceTarget1y: (data as any).price_target_1y || null,
+      recommendation: (data as any).recommendation || null,
+      confidenceScore: (data as any).confidence_score || null,
+      predictionReasoning: (data as any).prediction_reasoning || "",
+    },
   };
 }
