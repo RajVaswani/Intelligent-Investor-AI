@@ -18,7 +18,7 @@ interface Holding {
 interface RiskAnalyticsProps {
   holdings: Holding[];
   analyses: Record<string, AnalysisResult>;
-  livePrices: Record<string, number>;
+  livePrices?: Record<string, number>;
 }
 
 // Deterministic seeded random for Monte Carlo reproducibility
