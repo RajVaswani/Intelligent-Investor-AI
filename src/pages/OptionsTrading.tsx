@@ -4,6 +4,7 @@ import { Header } from "@/components/dashboard/Header";
 import { SymbolSearch } from "@/components/options/SymbolSearch";
 import { LivePredictions } from "@/components/options/LivePredictions";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
+import { RealTimeChart } from "@/components/charts/RealTimeChart";
 import { fetchIntradayData, type IntradayData } from "@/lib/api/optionsData";
 import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
 import type { AnalysisResult } from "@/lib/stockData";
@@ -38,7 +39,6 @@ export default function OptionsTrading() {
 
   useEffect(() => { loadData(symbol); }, [symbol, loadData]);
 
-  // 1-second live refresh
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -51,6 +51,8 @@ export default function OptionsTrading() {
 
   const allCompanies = [...NIFTY50_FULL, ...SPY500_FULL];
   const company = allCompanies.find((c) => c.symbol === symbol);
+  const isNifty50 = company?.etf === "nifty50";
+  const yahooSymbol = symbol.includes(".") ? symbol : isNifty50 ? `${symbol}.NS` : symbol;
   const tvSymbol = company?.tradingViewSymbol || (symbol.includes(".") ? symbol : `NASDAQ:${symbol}`);
 
   return (
@@ -77,7 +79,11 @@ export default function OptionsTrading() {
           </div>
         ) : (
           <div className="space-y-4">
-            <TradingViewChart symbol={tvSymbol} height={2000} interval="1" />
+            {isNifty50 ? (
+              <RealTimeChart symbol={symbol} yahooSymbol={yahooSymbol} height={2000} refreshInterval={1000} />
+            ) : (
+              <TradingViewChart symbol={tvSymbol} height={2000} interval="1" />
+            )}
             <LivePredictions data={intradayData} symbol={symbol} analysis={analysis} />
           </div>
         )}
@@ -85,3 +91,4 @@ export default function OptionsTrading() {
     </div>
   );
 }
+
