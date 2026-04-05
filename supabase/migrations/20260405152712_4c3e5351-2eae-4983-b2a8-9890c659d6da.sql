@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN ibkr_flex_token text, ADD COLUMN ibkr_query_id text;
