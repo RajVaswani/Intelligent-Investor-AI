@@ -19,9 +19,6 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
-          ibkr_flex_token: string | null
-          ibkr_gateway_url: string | null
-          ibkr_query_id: string | null
           id: string
           updated_at: string
         }
@@ -29,9 +26,6 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
-          ibkr_flex_token?: string | null
-          ibkr_gateway_url?: string | null
-          ibkr_query_id?: string | null
           id: string
           updated_at?: string
         }
@@ -39,9 +33,6 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
-          ibkr_flex_token?: string | null
-          ibkr_gateway_url?: string | null
-          ibkr_query_id?: string | null
           id?: string
           updated_at?: string
         }
@@ -199,6 +190,36 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_secrets: {
+        Row: {
+          created_at: string
+          ibkr_flex_token: string | null
+          ibkr_gateway_url: string | null
+          ibkr_query_id: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ibkr_flex_token?: string | null
+          ibkr_gateway_url?: string | null
+          ibkr_query_id?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ibkr_flex_token?: string | null
+          ibkr_gateway_url?: string | null
+          ibkr_query_id?: string | null
+          id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

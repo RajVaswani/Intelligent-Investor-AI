@@ -100,10 +100,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadHoldings();
-    supabase.from("profiles").select("ibkr_flex_token, ibkr_query_id").eq("id", user?.id).single().then(({ data }) => {
-      if (data?.ibkr_flex_token) setIbkrToken(data.ibkr_flex_token);
-      if (data?.ibkr_query_id) setIbkrQueryId(data.ibkr_query_id);
-    });
+    // Secrets are write-only from client; we check if they exist via edge function
   }, [user, loadHoldings]);
 
   // Load cached analyses for holdings
@@ -185,12 +182,14 @@ export default function Dashboard() {
   const saveIbkrSettings = async () => {
     if (!user) return;
     setIbkrLoading(true);
-    const { error } = await supabase.from("profiles").update({
+    // Upsert into user_secrets (write-only table)
+    const { error } = await supabase.from("user_secrets" as any).upsert({
+      user_id: user.id,
       ibkr_flex_token: ibkrToken,
       ibkr_query_id: ibkrQueryId,
-    }).eq("id", user.id);
+    }, { onConflict: "user_id" });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "IBKR credentials saved" });
+    else toast({ title: "IBKR credentials saved securely" });
     setIbkrLoading(false);
     setShowSettings(false);
   };
@@ -204,9 +203,9 @@ export default function Dashboard() {
     setIbkrSyncing(true);
     toast({ title: "Fetching from IBKR...", description: "Step 1: Requesting Flex Query report..." });
     try {
-      // Step 1: Request the report
+      // Step 1: Request the report (credentials read server-side)
       const { data: reqData, error: reqError } = await supabase.functions.invoke("ibkr-portfolio", {
-        body: { token: ibkrToken, queryId: ibkrQueryId, userId: user.id, step: "request" },
+        body: { userId: user.id, step: "request" },
       });
       if (reqError) throw new Error(reqError.message);
       if (!reqData?.success) throw new Error(reqData?.error || "Failed to request Flex report");
@@ -214,7 +213,7 @@ export default function Dashboard() {
       const refCode = reqData.referenceCode;
       toast({ title: "Report requested", description: "Waiting for IBKR to generate report..." });
 
-      // Step 2: Poll for results (client-side polling avoids edge function timeout)
+      // Step 2: Poll for results
       let attempts = 0;
       const maxAttempts = 10;
       while (attempts < maxAttempts) {
@@ -222,7 +221,7 @@ export default function Dashboard() {
         attempts++;
 
         const { data: fetchData, error: fetchError } = await supabase.functions.invoke("ibkr-portfolio", {
-          body: { token: ibkrToken, userId: user.id, step: "fetch", referenceCode: refCode },
+          body: { userId: user.id, step: "fetch", referenceCode: refCode },
         });
         if (fetchError) throw new Error(fetchError.message);
         if (!fetchData?.success) throw new Error(fetchData?.error || "Failed to fetch report");
