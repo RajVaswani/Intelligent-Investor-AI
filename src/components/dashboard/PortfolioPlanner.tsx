@@ -191,7 +191,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
                 <th className="px-4 py-2 text-left font-medium">Symbol</th>
                 <th className="px-4 py-2 text-right font-medium">Qty</th>
                 <th className="px-4 py-2 text-right font-medium">Avg Cost</th>
-                <th className="px-4 py-2 text-right font-medium">Est. Price</th>
+                <th className="px-4 py-2 text-right font-medium">AI Est. Price</th>
                 <th className="px-4 py-2 text-right font-medium">Value</th>
                 <th className="px-4 py-2 text-right font-medium">P&L</th>
                 <th className="px-4 py-2 text-right font-medium">P&L %</th>
