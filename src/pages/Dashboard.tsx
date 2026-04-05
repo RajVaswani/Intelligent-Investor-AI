@@ -52,8 +52,9 @@ export default function Dashboard() {
     supabase.from("user_portfolios").select("*").eq("user_id", user.id).then(({ data }) => {
       if (data) setHoldings(data as PortfolioHolding[]);
     });
-    supabase.from("profiles").select("ibkr_gateway_url").eq("id", user.id).single().then(({ data }) => {
-      if (data?.ibkr_gateway_url) setIbkrUrl(data.ibkr_gateway_url);
+    supabase.from("profiles").select("ibkr_flex_token, ibkr_query_id").eq("id", user.id).single().then(({ data }) => {
+      if (data?.ibkr_flex_token) setIbkrToken(data.ibkr_flex_token);
+      if (data?.ibkr_query_id) setIbkrQueryId(data.ibkr_query_id);
     });
   }, [user]);
 
