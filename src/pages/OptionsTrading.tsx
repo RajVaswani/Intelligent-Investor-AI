@@ -74,7 +74,7 @@ export default function OptionsTrading() {
           </div>
         ) : (
           <div className="space-y-4">
-            <TradingViewChart symbol={tvSymbol} height={1000} interval="1" />
+            <TradingViewChart symbol={tvSymbol} height={2000} interval="1" />
             <LivePredictions data={intradayData} symbol={symbol} analysis={analysis} />
           </div>
         )}
