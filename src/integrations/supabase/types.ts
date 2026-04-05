@@ -18,10 +18,14 @@ export type Database = {
         Row: {
           company_name: string
           confidence_score: number | null
+          controversy_scanner: string | null
           created_at: string
           etf: string
           financial_highlights: string | null
+          geopolitical_analysis: string | null
           id: string
+          macro_economic_factors: string | null
+          media_manipulation_check: string | null
           news_digest: string | null
           overall_score: number
           prediction_reasoning: string | null
@@ -31,8 +35,10 @@ export type Database = {
           price_target_3m: number | null
           raw_scraped_data: Json | null
           recommendation: string | null
+          regional_sentiment: string | null
           risks: string[] | null
           sector: string
+          sector_tailwinds_headwinds: string | null
           sentiment: string
           strengths: string[] | null
           summary: string
@@ -43,10 +49,14 @@ export type Database = {
         Insert: {
           company_name: string
           confidence_score?: number | null
+          controversy_scanner?: string | null
           created_at?: string
           etf: string
           financial_highlights?: string | null
+          geopolitical_analysis?: string | null
           id?: string
+          macro_economic_factors?: string | null
+          media_manipulation_check?: string | null
           news_digest?: string | null
           overall_score: number
           prediction_reasoning?: string | null
@@ -56,8 +66,10 @@ export type Database = {
           price_target_3m?: number | null
           raw_scraped_data?: Json | null
           recommendation?: string | null
+          regional_sentiment?: string | null
           risks?: string[] | null
           sector: string
+          sector_tailwinds_headwinds?: string | null
           sentiment: string
           strengths?: string[] | null
           summary: string
@@ -68,10 +80,14 @@ export type Database = {
         Update: {
           company_name?: string
           confidence_score?: number | null
+          controversy_scanner?: string | null
           created_at?: string
           etf?: string
           financial_highlights?: string | null
+          geopolitical_analysis?: string | null
           id?: string
+          macro_economic_factors?: string | null
+          media_manipulation_check?: string | null
           news_digest?: string | null
           overall_score?: number
           prediction_reasoning?: string | null
@@ -81,8 +97,10 @@ export type Database = {
           price_target_3m?: number | null
           raw_scraped_data?: Json | null
           recommendation?: string | null
+          regional_sentiment?: string | null
           risks?: string[] | null
           sector?: string
+          sector_tailwinds_headwinds?: string | null
           sentiment?: string
           strengths?: string[] | null
           summary?: string
