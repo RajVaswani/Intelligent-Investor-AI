@@ -54,6 +54,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
       return {
         ...h,
         costBasis,
+        hasEstimate,
         currentEstimate,
         estimatedValue,
         unrealizedPnL,
