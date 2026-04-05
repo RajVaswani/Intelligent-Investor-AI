@@ -9,7 +9,7 @@ interface HeaderProps {
 
 export function Header({ onRefreshAll, isRefreshing }: HeaderProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return (
     <header className="border-b border-border px-6 py-4">
