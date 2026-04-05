@@ -52,6 +52,7 @@ export async function analyzeCompany(company: Company): Promise<AnalysisResult> 
       confidenceScore: d.confidenceScore || null,
       predictionReasoning: d.predictionReasoning || "",
     },
+    macro: extractMacro(d),
   };
 }
 
