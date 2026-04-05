@@ -39,18 +39,22 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
     return holdings.map((h) => {
       const analysis = analyses[h.symbol];
       const costBasis = h.quantity * h.avg_price;
-      const target1y = analysis?.prediction?.priceTarget1y;
+      const target1w = analysis?.prediction?.priceTarget1w;
       const target1m = analysis?.prediction?.priceTarget1m;
-      const currentEstimate = target1m || h.avg_price;
+      const target1y = analysis?.prediction?.priceTarget1y;
+      // Use 1-week target as nearest proxy; if unavailable, mark as no data
+      const hasEstimate = !!target1w;
+      const currentEstimate = target1w || h.avg_price;
       const estimatedValue = h.quantity * currentEstimate;
-      const unrealizedPnL = estimatedValue - costBasis;
-      const pnlPercent = costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
+      const unrealizedPnL = hasEstimate ? estimatedValue - costBasis : 0;
+      const pnlPercent = hasEstimate && costBasis > 0 ? (unrealizedPnL / costBasis) * 100 : 0;
       const projectedValue1y = target1y ? h.quantity * target1y : null;
       const projectedPnL1y = projectedValue1y ? projectedValue1y - costBasis : null;
 
       return {
         ...h,
         costBasis,
+        hasEstimate,
         currentEstimate,
         estimatedValue,
         unrealizedPnL,
@@ -187,7 +191,7 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
                 <th className="px-4 py-2 text-left font-medium">Symbol</th>
                 <th className="px-4 py-2 text-right font-medium">Qty</th>
                 <th className="px-4 py-2 text-right font-medium">Avg Cost</th>
-                <th className="px-4 py-2 text-right font-medium">Est. Price</th>
+                <th className="px-4 py-2 text-right font-medium">AI Est. Price</th>
                 <th className="px-4 py-2 text-right font-medium">Value</th>
                 <th className="px-4 py-2 text-right font-medium">P&L</th>
                 <th className="px-4 py-2 text-right font-medium">P&L %</th>
@@ -203,13 +207,13 @@ export function PortfolioPlanner({ holdings, analyses, totalValue }: PortfolioPl
                   </td>
                   <td className="px-4 py-2.5 text-right text-foreground">{h.quantity}</td>
                   <td className="px-4 py-2.5 text-right text-foreground">${h.avg_price.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right text-foreground">${h.currentEstimate.toFixed(2)}</td>
-                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{formatCurrency(h.estimatedValue)}</td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.unrealizedPnL >= 0 ? "+" : ""}{formatCurrency(h.unrealizedPnL)}
+                  <td className="px-4 py-2.5 text-right text-foreground">{h.hasEstimate ? `$${h.currentEstimate.toFixed(2)}` : "—"}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-foreground">{h.hasEstimate ? formatCurrency(h.estimatedValue) : "—"}</td>
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.unrealizedPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasEstimate ? `${h.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(h.unrealizedPnL)}` : "—"}
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
-                    {h.pnlPercent >= 0 ? "+" : ""}{h.pnlPercent.toFixed(1)}%
+                  <td className={`px-4 py-2.5 text-right font-medium ${!h.hasEstimate ? "text-muted-foreground" : h.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}>
+                    {h.hasEstimate ? `${h.pnlPercent >= 0 ? "+" : ""}${h.pnlPercent.toFixed(1)}%` : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     {h.recommendation && (
