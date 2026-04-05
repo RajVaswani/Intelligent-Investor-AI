@@ -11,6 +11,7 @@ import {
   LogOut, Plus, Trash2, RefreshCw, Loader2, Settings,
   TrendingUp, TrendingDown, Minus, Link2, PieChart, BarChart3, Briefcase
 } from "lucide-react";
+import { PortfolioPlanner } from "@/components/dashboard/PortfolioPlanner";
 
 interface PortfolioHolding {
   id: string;
@@ -338,6 +339,11 @@ export default function Dashboard() {
               </button>
             )}
           </div>
+
+          {/* P&L + Goal Planner */}
+          {holdings.length > 0 && (
+            <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalValue} />
+          )}
 
           {/* Add Holding Form */}
           {showAddForm && (
