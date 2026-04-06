@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import type { IntradayData } from "@/lib/api/optionsData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
-import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain } from "lucide-react";
+import { getAccuracyStats } from "@/lib/signalLearner";
+import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target } from "lucide-react";
 
 interface Props {
   data: IntradayData | null;
