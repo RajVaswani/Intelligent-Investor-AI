@@ -72,6 +72,27 @@ export default function OptionsTrading() {
 
   useEffect(() => { loadData(symbol); }, [symbol, loadData]);
 
+  // Fetch 60-day historical data and replay through learning engine
+  useEffect(() => {
+    if (historicalRef.current === symbol) return;
+    historicalRef.current = symbol;
+    setHistoricalStatus("Loading 60-day historical data…");
+    fetchHistoricalData(symbol).then((hist) => {
+      if (hist && hist.candles.length > 0) {
+        setHistoricalStatus(`Replaying ${hist.totalCandles} candles through learning engine…`);
+        const result = replayHistoricalData(symbol, hist.candles);
+        if (result.verified > 0) {
+          setHistoricalStatus(`Learned from ${result.verified} historical predictions`);
+          setTimeout(() => setHistoricalStatus(null), 3000);
+        } else {
+          setHistoricalStatus(null); // already replayed
+        }
+      } else {
+        setHistoricalStatus(null);
+      }
+    }).catch(() => setHistoricalStatus(null));
+  }, [symbol]);
+
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
