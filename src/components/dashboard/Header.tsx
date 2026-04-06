@@ -1,4 +1,4 @@
-import { Activity, RefreshCw, User, Shield, LogOut, ChevronDown, TrendingUp } from "lucide-react";
+import { Activity, RefreshCw, User, Shield, LogOut, ChevronDown, TrendingUp, Crosshair } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +49,13 @@ export function Header({ onRefreshAll, isRefreshing }: HeaderProps) {
           >
             <TrendingUp className="h-4 w-4" />
             Options
+          </button>
+          <button
+            onClick={() => navigate("/options-master")}
+            className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            <Crosshair className="h-4 w-4" />
+            Master
           </button>
           {onRefreshAll && (
             <button

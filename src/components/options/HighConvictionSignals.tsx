@@ -4,7 +4,7 @@ import type { AccuracySnapshot } from "@/lib/signalLearner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Dot } from "recharts";
 import { Crosshair, ShieldCheck, Clock } from "lucide-react";
 
-interface HighConvictionEntry {
+export interface HighConvictionEntry {
   time: string;
   timestamp: number;
   price: number;
@@ -12,6 +12,7 @@ interface HighConvictionEntry {
   allAgree: boolean;
   confidence: number;
   reasons: string[];
+  symbol?: string;
 }
 
 interface Props {
@@ -32,7 +33,7 @@ interface Props {
  * Determines if ALL conditions are met for a 100% conviction signal.
  * Extremely strict — only fires when every single indicator agrees.
  */
-function evaluate100PctSignal(signals: LiveSignals, accuracyStats: Props["accuracyStats"]): { signal: "BUY" | "SELL" | null; reasons: string[] } {
+export function evaluate100PctSignal(signals: LiveSignals, accuracyStats: Props["accuracyStats"]): { signal: "BUY" | "SELL" | null; reasons: string[] } {
   const reasons: string[] = [];
 
   // 1. ALL timeframe predictions must agree on direction
