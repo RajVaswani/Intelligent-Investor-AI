@@ -372,6 +372,7 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
             <span className="text-[9px] text-chart-2">LIVE</span>
           </div>
           <AutoTradeSimulator
+            key={symbol}
             history={history}
             currentPrice={signals?.currentPrice ?? 0}
             currency={currency}
