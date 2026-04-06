@@ -344,7 +344,7 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
       )}
 
       <p className="text-center text-[10px] text-muted-foreground">
-        Signals blend technical indicators (RSI, EMA, VWAP, momentum, volume) with AI-scraped micro/macro data.
+        Signals use recursive learning: predictions are tracked, verified, and weights auto-adjust to improve accuracy over time.
         Not financial advice.
       </p>
     </div>
