@@ -9,6 +9,37 @@
 
 import type { IntradayCandle } from "@/lib/api/optionsData";
 
+export interface PredictionContext {
+  rsi: number;
+  stochRsi: number;
+  emaAlignment: string;
+  macdHistogram: number;
+  macdCrossover: string;
+  bollingerPosition: number;
+  atr: number;
+  support: number;
+  resistance: number;
+  vwap: number;
+  momentum: number;
+  volumeTrend: string;
+  volatilityRegime: string;
+  volumePriceDivergence: boolean;
+  trend: string;
+  // Composite scores
+  technicalScore: number;
+  fundamentalScore: number;
+  compositeScore: number;
+  techWeight: number;
+  // Macro/micro
+  sentiment?: string;
+  overallAIScore?: number;
+  recommendation?: string | null;
+  macroDetails?: { label: string; impact: string; summary: string }[];
+  // Weights used
+  weights: IndicatorAccuracy;
+  reasoning: string;
+}
+
 export interface PredictionRecord {
   timestamp: number;
   symbol: string;
@@ -16,6 +47,7 @@ export interface PredictionRecord {
   predictedPrice: number;
   actualPriceAtPrediction: number;
   predictedDirection: "up" | "down" | "flat";
+  context?: PredictionContext;
   // filled in later when we can verify
   actualPrice?: number;
   wasCorrect?: boolean;
@@ -96,7 +128,8 @@ export function recordPrediction(
   symbol: string,
   timeframeSeconds: number,
   predictedPrice: number,
-  currentPrice: number
+  currentPrice: number,
+  context?: PredictionContext,
 ): void {
   const state = loadState(symbol);
   const predictedDirection: "up" | "down" | "flat" =
@@ -110,9 +143,25 @@ export function recordPrediction(
     predictedPrice,
     actualPriceAtPrediction: currentPrice,
     predictedDirection,
+    context,
   });
 
   saveState(symbol, state);
+}
+
+/**
+ * Get predictions filtered by timeframe for drill-down UI
+ */
+export function getPredictionsByTimeframe(
+  symbol: string,
+  timeframeSeconds?: number,
+): PredictionRecord[] {
+  const state = loadState(symbol);
+  const preds = state.predictions.filter(p => p.wasCorrect !== undefined);
+  if (timeframeSeconds !== undefined) {
+    return preds.filter(p => p.timeframeSeconds === timeframeSeconds).slice(-100);
+  }
+  return preds.slice(-200);
 }
 
 /**

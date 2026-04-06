@@ -15,7 +15,7 @@
  */
 
 import type { IntradayCandle } from "@/lib/api/optionsData";
-import { getLearnedWeights, recordPrediction, verifyPredictions, type IndicatorAccuracy } from "@/lib/signalLearner";
+import { getLearnedWeights, recordPrediction, verifyPredictions, type IndicatorAccuracy, type PredictionContext } from "@/lib/signalLearner";
 
 export type Signal = "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL";
 
@@ -510,7 +510,19 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
     if (volumePriceDivergence) parts.push("⚠ Vol-Price Divergence");
     if (momAcceleration !== 0) parts.push(`Accel ${momAcceleration > 0 ? "↑" : "↓"}`);
 
-    recordPrediction(sym, tf.seconds, predictedPrice, currentPrice);
+    const predContext: PredictionContext = {
+      rsi, stochRsi, emaAlignment, macdHistogram: macdData.histogram, macdCrossover: macdData.crossover,
+      bollingerPosition: bollinger.position, atr, support, resistance, vwap: lastVwap,
+      momentum, volumeTrend, volatilityRegime, volumePriceDivergence, trend,
+      technicalScore, fundamentalScore, compositeScore: compositeScore,
+      techWeight: tw, weights: { ...learnedW },
+      sentiment: analysis?.sentiment, overallAIScore: analysis?.overallScore,
+      recommendation: analysis?.recommendation,
+      macroDetails: macroMicro?.details.map(d => ({ label: d.label, impact: d.impact, summary: d.summary })),
+      reasoning: parts.join(" | "),
+    };
+
+    recordPrediction(sym, tf.seconds, predictedPrice, currentPrice, predContext);
 
     return {
       label: tf.label,

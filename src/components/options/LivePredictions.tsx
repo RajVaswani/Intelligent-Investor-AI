@@ -3,6 +3,7 @@ import type { IntradayData } from "@/lib/api/optionsData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
 import { getAccuracyStats, type AccuracySnapshot } from "@/lib/signalLearner";
+import { PredictionDrilldown } from "@/components/options/PredictionDrilldown";
 import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers, LineChart } from "lucide-react";
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 
@@ -75,6 +76,7 @@ const tfLabelMap: Record<number, string> = {
 export function LivePredictions({ data, symbol, analysis, isIndian = false }: Props) {
   const curr = isIndian ? "₹" : "$";
   const [tick, setTick] = useState(0);
+  const [drilldownTF, setDrilldownTF] = useState<number | null>(null);
 
   useEffect(() => {
     const i = setInterval(() => setTick((t) => t + 1), 1000);
@@ -299,11 +301,15 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
                       : d.accuracy >= 45 ? "text-chart-4 border-chart-4/30 bg-chart-4/10" 
                       : "text-destructive border-destructive/30 bg-destructive/10";
                     return (
-                      <div key={tf} className={`rounded-lg border p-2 text-center ${color}`}>
+                      <button
+                        key={tf}
+                        onClick={() => setDrilldownTF(Number(tf))}
+                        className={`rounded-lg border p-2 text-center transition-all hover:ring-2 hover:ring-primary/40 cursor-pointer ${color}`}
+                      >
                         <div className="text-[10px] font-medium uppercase">{label}</div>
                         <div className="text-sm font-bold font-mono">{d.accuracy.toFixed(0)}%</div>
-                        <div className="text-[8px] opacity-70">{d.total} pred</div>
-                      </div>
+                        <div className="text-[8px] opacity-70">{d.total} pred · click</div>
+                      </button>
                     );
                   })}
               </div>
@@ -472,6 +478,14 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         Enhanced with IB Traders' Academy factors: Bollinger Bands, MACD, Stochastic RSI, ATR, Support/Resistance, Volume-Price Divergence, Volatility Regime.
         Recursive learning tracks & auto-adjusts. Not financial advice.
       </p>
+
+      <PredictionDrilldown
+        symbol={symbol}
+        timeframeSeconds={drilldownTF ?? 60}
+        open={drilldownTF !== null}
+        onOpenChange={(open) => { if (!open) setDrilldownTF(null); }}
+        currency={curr}
+      />
     </div>
   );
 }
