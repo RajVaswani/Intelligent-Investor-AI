@@ -32,6 +32,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/portfolio/:symbol" element={<ProtectedRoute><PortfolioHoldingDetail /></ProtectedRoute>} />
           <Route path="/options" element={<ProtectedRoute><OptionsTrading /></ProtectedRoute>} />
+          <Route path="/options-master" element={<ProtectedRoute><OptionsMaster /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
