@@ -203,12 +203,51 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         </div>
       </div>
 
+      {/* Recursive Learning Stats */}
+      {accuracyStats.total > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Target className="h-4 w-4 text-primary" />
+            Recursive Learning Engine
+            <span className="ml-auto text-[10px] font-normal text-muted-foreground">{accuracyStats.total} predictions tracked</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg bg-muted/30 p-2 text-center">
+              <div className="text-[10px] uppercase text-muted-foreground">Overall Accuracy</div>
+              <div className={`text-lg font-bold font-mono ${accuracyStats.overall >= 55 ? "text-chart-2" : accuracyStats.overall <= 40 ? "text-destructive" : "text-foreground"}`}>
+                {accuracyStats.overall.toFixed(1)}%
+              </div>
+              <div className="text-[10px] text-muted-foreground">{accuracyStats.correct}/{accuracyStats.total} correct</div>
+            </div>
+            <div className="rounded-lg bg-muted/30 p-2 text-center">
+              <div className="text-[10px] uppercase text-muted-foreground">Learned Weights</div>
+              <div className="mt-1 flex flex-wrap justify-center gap-1 text-[9px]">
+                <span className="rounded bg-primary/10 px-1 py-0.5">RSI {(accuracyStats.weights.rsi * 100).toFixed(0)}%</span>
+                <span className="rounded bg-primary/10 px-1 py-0.5">EMA {(accuracyStats.weights.ema * 100).toFixed(0)}%</span>
+                <span className="rounded bg-primary/10 px-1 py-0.5">Mom {(accuracyStats.weights.momentum * 100).toFixed(0)}%</span>
+                <span className="rounded bg-primary/10 px-1 py-0.5">VWAP {(accuracyStats.weights.vwap * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+            <div className="rounded-lg bg-muted/30 p-2 text-center">
+              <div className="text-[10px] uppercase text-muted-foreground">By Timeframe</div>
+              <div className="mt-1 flex flex-wrap justify-center gap-1 text-[9px]">
+                {Object.entries(accuracyStats.byTimeframe).slice(0, 4).map(([tf, d]) => (
+                  <span key={tf} className={`rounded px-1 py-0.5 ${d.accuracy >= 55 ? "bg-chart-2/10 text-chart-2" : d.accuracy <= 40 ? "bg-destructive/10 text-destructive" : "bg-muted text-foreground"}`}>
+                    {Number(tf) < 60 ? `${tf}s` : `${Number(tf) / 60}m`}: {d.accuracy.toFixed(0)}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Timeframe predictions grid */}
       <div>
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Zap className="h-4 w-4 text-primary" />
           Predictions by Timeframe
-          {analysisInput && <span className="text-[10px] font-normal text-muted-foreground">(Technical + Micro/Macro weighted)</span>}
+          {analysisInput && <span className="text-[10px] font-normal text-muted-foreground">(Adaptive weights · Recursive learning active)</span>}
         </h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {signals.predictions.map((p) => (
