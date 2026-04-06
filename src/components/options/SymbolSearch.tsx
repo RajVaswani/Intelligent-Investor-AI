@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 
-const US_POPULAR = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "SPY", "QQQ", "AMD"];
-const NIFTY_POPULAR = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "TATAMOTORS", "LT"];
+const US_POPULAR = ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD"];
+const NIFTY_POPULAR = ["NIFTY50", "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "TATAMOTORS"];
 
 interface Props {
   value: string;
