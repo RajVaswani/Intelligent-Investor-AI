@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 
-const US_POPULAR = ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD"];
-const NIFTY_POPULAR = ["NIFTY50", "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "TATAMOTORS"];
+const ETF_US = ["SPY", "QQQ"];
+const ETF_IN = ["NIFTY50"];
+const US_POPULAR = [...ETF_US, "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD"];
+const NIFTY_POPULAR = [...ETF_IN, "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL"];
+const ALL_ETFS = new Set([...ETF_US, ...ETF_IN]);
 
 interface Props {
   value: string;
