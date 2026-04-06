@@ -174,9 +174,10 @@ export default function OptionsMaster() {
                 if (stillOpen === 0) {
                   lastTradeTime = now;
                   trades.push({
-                    id: `${sym}-${now}`, entryPrice: price, direction: best.direction,
-                    exitPrice: null, pnl: null, status: "OPEN", openedAt: now, closedAt: null,
-                    reason: best.reason, fedToLearner: false,
+                    id: `${sym}-${now}`, symbol: sym, entryPrice: price, direction: best.direction,
+                    exitPrice: null, exitTime: null, pnl: null, pnlPct: null, status: "OPEN", openedAt: now, closedAt: null,
+                    reason: best.reason, confidence: best.confidence, fedToLearner: false,
+                  });
                   });
                 }
               }
