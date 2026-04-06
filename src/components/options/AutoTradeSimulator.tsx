@@ -28,7 +28,7 @@ const STARTING_CAPITAL = 10000;
 const POSITION_SIZE = 1000;
 const MIN_TRADE_GAP_MS = 5000; // 5s gap between trades
 
-function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT" | "HOLD"; confidence: number; reason: string } | null {
+function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT"; confidence: number; reason: string } | null {
   const preds = signals.predictions;
   if (!preds || preds.length === 0) return null;
 
