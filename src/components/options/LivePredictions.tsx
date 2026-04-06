@@ -260,6 +260,9 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         </div>
       </div>
 
+      {/* 100% Conviction Signals */}
+      <HighConvictionSignals signals={signals} symbol={symbol} currency={curr} accuracyStats={accuracyStats} />
+
       {/* Recursive Learning Stats with per-timeframe accuracy */}
       {accuracyStats.total > 0 && (
         <div className="rounded-xl border border-border bg-card p-4">
