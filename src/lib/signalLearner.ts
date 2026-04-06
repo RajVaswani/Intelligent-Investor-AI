@@ -128,7 +128,8 @@ export function recordPrediction(
   symbol: string,
   timeframeSeconds: number,
   predictedPrice: number,
-  currentPrice: number
+  currentPrice: number,
+  context?: PredictionContext,
 ): void {
   const state = loadState(symbol);
   const predictedDirection: "up" | "down" | "flat" =
@@ -142,9 +143,25 @@ export function recordPrediction(
     predictedPrice,
     actualPriceAtPrediction: currentPrice,
     predictedDirection,
+    context,
   });
 
   saveState(symbol, state);
+}
+
+/**
+ * Get predictions filtered by timeframe for drill-down UI
+ */
+export function getPredictionsByTimeframe(
+  symbol: string,
+  timeframeSeconds?: number,
+): PredictionRecord[] {
+  const state = loadState(symbol);
+  const preds = state.predictions.filter(p => p.wasCorrect !== undefined);
+  if (timeframeSeconds !== undefined) {
+    return preds.filter(p => p.timeframeSeconds === timeframeSeconds).slice(-100);
+  }
+  return preds.slice(-200);
 }
 
 /**
