@@ -171,42 +171,83 @@ function buildMacroMicro(analysis: AnalysisInput): MacroMicroInfluence {
   return { sentimentScore, macroScore: macroAvg, details };
 }
 
-export function computeLiveSignals(candles: IntradayCandle[], analysis?: AnalysisInput | null): LiveSignals | null {
+export function computeLiveSignals(candles: IntradayCandle[], analysis?: AnalysisInput | null, symbol?: string): LiveSignals | null {
   if (!candles || candles.length < 20) return null;
 
+  const sym = symbol || "UNKNOWN";
+
+  // Verify past predictions with current price
   const closes = candles.map(c => c.close);
   const volumes = candles.map(c => c.volume);
   const currentPrice = closes[closes.length - 1];
   const lastVwap = candles[candles.length - 1].vwap;
 
+  verifyPredictions(sym, currentPrice);
+
+  // Get learned weights from recursive learning
+  const learnedW = getLearnedWeights(sym);
+
   const rsi = computeRSI(closes);
   const ema9 = computeEMA(closes, 9);
   const ema21 = computeEMA(closes, 21);
+  const ema50 = computeEMA(closes, Math.min(50, closes.length - 1));
   const currentEma9 = ema9[ema9.length - 1];
   const currentEma21 = ema21[ema21.length - 1];
+  const currentEma50 = ema50[ema50.length - 1];
 
-  const lookback = Math.min(5, closes.length - 1);
-  const momentum = ((currentPrice - closes[closes.length - 1 - lookback]) / closes[closes.length - 1 - lookback]) * 100;
+  // Multi-lookback momentum detection for better trend read
+  const mom3 = closes.length > 3 ? ((currentPrice - closes[closes.length - 4]) / closes[closes.length - 4]) * 100 : 0;
+  const mom5 = closes.length > 5 ? ((currentPrice - closes[closes.length - 6]) / closes[closes.length - 6]) * 100 : 0;
+  const mom10 = closes.length > 10 ? ((currentPrice - closes[closes.length - 11]) / closes[closes.length - 11]) * 100 : 0;
+  const mom20 = closes.length > 20 ? ((currentPrice - closes[closes.length - 21]) / closes[closes.length - 21]) * 100 : 0;
+  const momentum = mom5; // primary display value
 
+  // Detect momentum acceleration (is momentum increasing or decreasing?)
+  const momAcceleration = mom3 - mom5; // positive = accelerating up, negative = accelerating down
+
+  // Price rate of change over recent candles
+  const recentCloses5 = closes.slice(-5);
+  const priceSlope = recentCloses5.length > 1
+    ? (recentCloses5[recentCloses5.length - 1] - recentCloses5[0]) / recentCloses5[0] * 100
+    : 0;
+
+  // Volume analysis
   const recentVol = volumes.slice(-10);
   const olderVol = volumes.slice(-20, -10);
   const avgRecent = recentVol.reduce((a, b) => a + b, 0) / recentVol.length;
   const avgOlder = olderVol.length > 0 ? olderVol.reduce((a, b) => a + b, 0) / olderVol.length : avgRecent;
   const volumeTrend: "rising" | "falling" | "stable" = avgRecent > avgOlder * 1.15 ? "rising" : avgRecent < avgOlder * 0.85 ? "falling" : "stable";
 
-  const trend: "up" | "down" | "flat" = currentEma9 > currentEma21 * 1.001 ? "up" : currentEma9 < currentEma21 * 0.999 ? "down" : "flat";
+  // Multi-EMA trend detection (stronger signal with 3 EMAs)
+  const emaAlignment = currentEma9 > currentEma21 && currentEma21 > currentEma50 ? "bullish"
+    : currentEma9 < currentEma21 && currentEma21 < currentEma50 ? "bearish" : "mixed";
+  const trend: "up" | "down" | "flat" = emaAlignment === "bullish" ? "up" : emaAlignment === "bearish" ? "down"
+    : currentEma9 > currentEma21 * 1.001 ? "up" : currentEma9 < currentEma21 * 0.999 ? "down" : "flat";
+
   const vwapDiff = (currentPrice - lastVwap) / lastVwap;
   const priceVsVwap: "above" | "below" | "at" = vwapDiff > 0.001 ? "above" : vwapDiff < -0.001 ? "below" : "at";
 
-  // Technical scores
-  const rsiScore = rsi > 70 ? 30 : rsi < 30 ? 70 : 50 + (50 - rsi) * 0.4;
-  const emaScore = currentEma9 > currentEma21 ? 65 : currentEma9 < currentEma21 ? 35 : 50;
-  const vwapScore = priceVsVwap === "above" ? 60 : priceVsVwap === "below" ? 40 : 50;
-  const momScore = momentum > 0.1 ? 65 : momentum < -0.1 ? 35 : 50;
-  const volScore = volumeTrend === "rising" && trend === "up" ? 65 : volumeTrend === "rising" && trend === "down" ? 35 : 50;
+  // Enhanced technical scores with momentum acceleration
+  const rsiScore = rsi > 80 ? 20 : rsi > 70 ? 30 : rsi < 20 ? 80 : rsi < 30 ? 70 : 50 + (50 - rsi) * 0.4;
+  const emaScore = emaAlignment === "bullish" ? 75 : emaAlignment === "bearish" ? 25
+    : currentEma9 > currentEma21 ? 60 : currentEma9 < currentEma21 ? 40 : 50;
+  const vwapScore = vwapDiff > 0.003 ? 70 : vwapDiff > 0.001 ? 60 : vwapDiff < -0.003 ? 30 : vwapDiff < -0.001 ? 40 : 50;
 
-  // Technical base: 60% weight
-  const technicalScore = rsiScore * 0.25 + emaScore * 0.25 + vwapScore * 0.2 + momScore * 0.2 + volScore * 0.1;
+  // Momentum score uses acceleration for direction
+  const momRaw = mom5 > 0.2 ? 75 : mom5 > 0.05 ? 62 : mom5 < -0.2 ? 25 : mom5 < -0.05 ? 38 : 50;
+  const accelBonus = momAcceleration > 0 ? 5 : momAcceleration < 0 ? -5 : 0;
+  const momScore = Math.max(10, Math.min(90, momRaw + accelBonus));
+
+  // Volume confirms direction - high volume in trend direction = stronger
+  const volScore = volumeTrend === "rising" && trend === "up" ? 70
+    : volumeTrend === "rising" && trend === "down" ? 30
+    : volumeTrend === "falling" && trend === "up" ? 45
+    : volumeTrend === "falling" && trend === "down" ? 55
+    : 50;
+
+  // Use learned weights for technical score
+  const technicalScore = rsiScore * learnedW.rsi + emaScore * learnedW.ema
+    + vwapScore * learnedW.vwap + momScore * learnedW.momentum + volScore * learnedW.volume;
 
   // Macro/Micro influence: 40% weight when available
   let macroMicro: MacroMicroInfluence | null = null;
