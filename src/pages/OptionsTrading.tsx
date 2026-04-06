@@ -93,6 +93,7 @@ export default function OptionsTrading() {
     }).catch(() => setHistoricalStatus(null));
   }, [symbol]);
 
+  // Refresh intraday data every 1s
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -101,6 +102,20 @@ export default function OptionsTrading() {
       } catch { /* silent */ }
     }, 1000);
     return () => clearInterval(interval);
+  }, [symbol]);
+
+  // Re-fetch macro analysis every 60s for live macro updates
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const comp = allCompanies.find((c) => c.symbol === symbol);
+      if (!comp) return;
+      try {
+        const result = await analyzeCompany(comp);
+        if (result) setAnalysis(result);
+      } catch { /* silent */ }
+    }, 60000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
 
   return (

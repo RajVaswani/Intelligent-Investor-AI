@@ -32,6 +32,8 @@ export interface TimeframePrediction {
 export interface MacroMicroInfluence {
   sentimentScore: number;
   macroScore: number;
+  priceConfirmation?: "confirming" | "contradicting" | "neutral";
+  confirmationStrength?: number;
   details: {
     label: string;
     impact: "bullish" | "bearish" | "neutral";
@@ -424,9 +426,12 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
 
   const technicalScore = coreScore * 0.60 + enhancedScore * 0.40;
 
-  // ── Macro/Micro influence ──
+  // ── Macro/Micro influence with dynamic re-weighting ──
+  // Each second, we check if price action confirms or denies the macro thesis
+  // and adjust the fundamental score's influence dynamically
   let macroMicro: MacroMicroInfluence | null = null;
   let fundamentalScore = 50;
+  let macroConfirmation = 1.0; // 1.0 = neutral, >1 = price confirms macro, <1 = price contradicts
 
   if (analysis) {
     macroMicro = buildMacroMicro(analysis);
@@ -436,6 +441,33 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
     const recScore = recommendationToScore(analysis.recommendation);
     const confScore = analysis.confidenceScore ? analysis.confidenceScore : 50;
     fundamentalScore = aiScore * 0.3 + sentScore * 0.2 + macScore * 0.2 + recScore * 0.15 + confScore * 0.15;
+
+    // Dynamic re-weighting: does recent price action confirm the macro thesis?
+    // If macro says bullish (score > 55) and price is trending up → boost macro weight
+    // If macro says bullish but price is falling → reduce macro weight (market disagrees)
+    const macroBullish = fundamentalScore > 55;
+    const macroBearish = fundamentalScore < 45;
+    const priceConfirms = (macroBullish && trend === "up") || (macroBearish && trend === "down");
+    const priceContradicts = (macroBullish && trend === "down") || (macroBearish && trend === "up");
+    
+    // Use short-term momentum to gauge confirmation strength
+    const momConfirms = (macroBullish && mom5 > 0.02) || (macroBearish && mom5 < -0.02);
+    const momContradicts = (macroBullish && mom5 < -0.05) || (macroBearish && mom5 > 0.05);
+
+    if (priceConfirms && momConfirms) macroConfirmation = 1.3; // strong confirmation
+    else if (priceConfirms) macroConfirmation = 1.15;
+    else if (priceContradicts && momContradicts) macroConfirmation = 0.6; // strong contradiction
+    else if (priceContradicts) macroConfirmation = 0.8;
+
+    // Apply confirmation to fundamental score — pull toward or away from 50
+    fundamentalScore = 50 + (fundamentalScore - 50) * macroConfirmation;
+    fundamentalScore = Math.max(10, Math.min(90, fundamentalScore));
+
+    // Annotate macro/micro with live confirmation status
+    if (macroMicro) {
+      macroMicro.priceConfirmation = priceConfirms ? "confirming" : priceContradicts ? "contradicting" : "neutral";
+      macroMicro.confirmationStrength = macroConfirmation;
+    }
   }
 
   // ── Timeframe predictions ──
