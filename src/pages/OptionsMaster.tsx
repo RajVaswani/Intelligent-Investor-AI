@@ -18,9 +18,11 @@ const TOP_SYMBOLS = [
 const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
 
 const POSITION_SIZE = 1000;
-const MIN_HOLD_MS = 60_000;
-const MAX_HOLD_MS = 600_000;
-const MIN_TRADE_GAP_MS = 5000;
+const MIN_HOLD_MS = 0;
+const MAX_HOLD_MS = 300_000;
+const MIN_TRADE_GAP_MS = 1000;
+const TAKE_PROFIT_PCT = 0.15;
+const STOP_LOSS_PCT = 0.20;
 
 interface SymbolState {
   symbol: string;
@@ -131,12 +133,24 @@ export default function OptionsMaster() {
           let lastTradeTime = state.lastTradeTime;
           const price = signals.currentPrice;
 
-          // Auto-close at max hold
+          // Auto-close: take-profit, stop-loss, max hold
           trades = trades.map(t => {
-            if (t.status === "OPEN" && (now - t.openedAt) >= MAX_HOLD_MS) {
+            if (t.status !== "OPEN") return t;
+            const pnlPct = t.direction === "LONG"
+              ? ((price - t.entryPrice) / t.entryPrice) * 100
+              : ((t.entryPrice - price) / t.entryPrice) * 100;
+            const holdTime = now - t.openedAt;
+            if (pnlPct >= TAKE_PROFIT_PCT) {
               const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
-              const closed: PersistedTrade = { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct: (pnl / t.entryPrice) * 100, status: "CLOSED", closedAt: now };
-              return closed;
+              return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct, status: "CLOSED" as const, closedAt: now, reason: `${t.reason} → ✅ TP +${pnlPct.toFixed(2)}%` };
+            }
+            if (pnlPct <= -STOP_LOSS_PCT) {
+              const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
+              return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct, status: "CLOSED" as const, closedAt: now, reason: `${t.reason} → 🛑 SL ${pnlPct.toFixed(2)}%` };
+            }
+            if (holdTime >= MAX_HOLD_MS) {
+              const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
+              return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct, status: "CLOSED" as const, closedAt: now };
             }
             return t;
           });
@@ -159,8 +173,8 @@ export default function OptionsMaster() {
               const lastOpen = openTrades[openTrades.length - 1];
 
               if (!lastOpen || lastOpen.direction !== best.direction) {
-                // Close opposite if past min hold
-                if (lastOpen && (now - lastOpen.openedAt) >= MIN_HOLD_MS) {
+                // Close opposite immediately
+                if (lastOpen) {
                   trades = trades.map(t => {
                     if (t.status === "OPEN") {
                       const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
@@ -275,7 +289,7 @@ export default function OptionsMaster() {
             <DollarSign className="h-5 w-5 text-primary" />
             <h3 className="text-sm font-bold text-foreground">Portfolio P&L · All Auto-Traders</h3>
             <Brain className="h-4 w-4 text-primary/60" />
-            <span className="text-[10px] text-muted-foreground">Self-improving · $1K/trade · 1–10m hold</span>
+            <span className="text-[10px] text-muted-foreground">Self-improving · $1K/trade · TP 0.15% · SL 0.20%</span>
             <span className="ml-auto relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
@@ -440,7 +454,7 @@ export default function OptionsMaster() {
                   <div className="py-16 text-center">
                     <Zap className="mx-auto mb-2 h-8 w-8 text-muted-foreground/20" />
                     <p className="text-xs text-muted-foreground">No trades closed yet.</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">Auto-traders are scanning and trading — results appear here after 1–10m hold.</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">Auto-traders are scanning and trading — results appear after TP/SL hit.</p>
                   </div>
                 ) : (
                   recentTrades.map((t, i) => (

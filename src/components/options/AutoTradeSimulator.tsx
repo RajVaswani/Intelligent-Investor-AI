@@ -15,9 +15,11 @@ interface Props {
 
 const STARTING_CAPITAL = 10000;
 const POSITION_SIZE = 1000;
-const MIN_HOLD_MS = 60_000;
-const MAX_HOLD_MS = 600_000;
-const MIN_TRADE_GAP_MS = 5000;
+const MIN_HOLD_MS = 0;        // No minimum hold — book P&L immediately
+const MAX_HOLD_MS = 300_000;   // 5 min safety net
+const MIN_TRADE_GAP_MS = 1000; // 1 second between trades
+const TAKE_PROFIT_PCT = 0.15;  // Book profit at 0.15%
+const STOP_LOSS_PCT = 0.20;    // Cut loss at 0.20%
 
 function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT"; confidence: number; reason: string } | null {
   const preds = signals.predictions;
@@ -97,7 +99,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     saveTrades(symbol, trades);
   }, [trades, symbol]);
 
-  // Auto-close trades at MAX hold time
+  // Auto-close: take-profit, stop-loss, and max hold
   useEffect(() => {
     if (currentPrice <= 0) return;
     const now = Date.now();
@@ -106,10 +108,22 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       let changed = false;
       const updated = prev.map(t => {
         if (t.status !== "OPEN") return t;
+        const pnlPct = t.direction === "LONG"
+          ? ((currentPrice - t.entryPrice) / t.entryPrice) * 100
+          : ((t.entryPrice - currentPrice) / t.entryPrice) * 100;
         const holdTime = now - t.openedAt;
+
+        if (pnlPct >= TAKE_PROFIT_PCT) {
+          changed = true;
+          return closeTrade(t, currentPrice, now, `✅ Take profit +${pnlPct.toFixed(2)}%`);
+        }
+        if (pnlPct <= -STOP_LOSS_PCT) {
+          changed = true;
+          return closeTrade(t, currentPrice, now, `🛑 Stop loss ${pnlPct.toFixed(2)}%`);
+        }
         if (holdTime >= MAX_HOLD_MS) {
           changed = true;
-          return closeTrade(t, currentPrice, now, "Max 10m hold");
+          return closeTrade(t, currentPrice, now, "⏱ Max hold");
         }
         return t;
       });
@@ -149,14 +163,15 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       const openTrades = prev.filter(t => t.status === "OPEN");
       const lastOpen = openTrades[openTrades.length - 1];
 
+      // Same direction already open — skip
       if (lastOpen && lastOpen.direction === best.direction) return prev;
-      if (lastOpen && (now - lastOpen.openedAt) < MIN_HOLD_MS) return prev;
 
       let updated = [...prev];
 
+      // Close any opposite trades immediately on signal flip
       updated = updated.map(t => {
-        if (t.status === "OPEN" && t.direction !== best.direction && (now - t.openedAt) >= MIN_HOLD_MS) {
-          return closeTrade(t, currentPrice, now, "Signal flip");
+        if (t.status === "OPEN" && t.direction !== best.direction) {
+          return closeTrade(t, currentPrice, now, "⚡ Signal flip");
         }
         return t;
       });
@@ -204,9 +219,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         // Don't open if already holding same direction
         if (openTrades.some(t => t.direction === newDirection)) continue;
 
-        // Close opposite trades only if past MIN_HOLD
+        // Close opposite trades immediately
         updated = updated.map(t => {
-          if (t.status === "OPEN" && t.direction !== newDirection && (now - t.openedAt) >= MIN_HOLD_MS) {
+          if (t.status === "OPEN" && t.direction !== newDirection) {
             return closeTrade(t, currentPrice, now, "⚡ Conviction override");
           }
           return t;
@@ -285,7 +300,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
         <Wallet className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
         <p className="text-xs text-muted-foreground">Auto-trader active — waiting for actionable signal</p>
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Hold: 1–10 min · Feeds wins/losses to recursive learning · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">TP {TAKE_PROFIT_PCT}% · SL {STOP_LOSS_PCT}% · Recursive learning · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
       </div>
     );
   }
@@ -341,7 +356,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
               </div>
               <div className="text-[9px] text-muted-foreground">
                 <Clock className="h-3 w-3 inline mr-0.5" />
-                1–10m hold
+                TP {TAKE_PROFIT_PCT}% · SL {STOP_LOSS_PCT}%
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
