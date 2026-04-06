@@ -167,11 +167,11 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
         timestamp: now,
         price: signals.currentPrice,
         signal: result.signal!,
-        allAgree: true,
-        confidence: 100,
+        allAgree: result.passedCount === result.totalChecks,
+        confidence: Math.round((result.passedCount / result.totalChecks) * 100),
         reasons: result.reasons,
       }];
-      return next.slice(-50); // keep last 50 signals
+      return next.slice(-50);
     });
   }, [signals, accuracyStats]);
 
