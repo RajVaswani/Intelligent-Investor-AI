@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 
-const US_POPULAR = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "SPY", "QQQ", "AMD"];
-const NIFTY_POPULAR = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL", "TATAMOTORS", "LT"];
+const ETF_US = ["SPY", "QQQ"];
+const ETF_IN = ["NIFTY50"];
+const US_POPULAR = [...ETF_US, "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD"];
+const NIFTY_POPULAR = [...ETF_IN, "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "ITC", "BHARTIARTL"];
+const ALL_ETFS = new Set([...ETF_US, ...ETF_IN]);
 
 interface Props {
   value: string;
@@ -69,13 +72,15 @@ export function SymbolSearch({ value, onChange }: Props) {
           <button
             key={s}
             onClick={() => { setInput(s); onChange(s); }}
-            className={`rounded-md border px-2 py-0.5 text-xs transition-colors ${
+            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition-colors ${
               s === value
                 ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
+                : ALL_ETFS.has(s)
+                  ? "border-accent bg-accent/10 text-accent-foreground hover:border-primary/50"
+                  : "border-border text-muted-foreground hover:border-primary/50"
             }`}
           >
-            {s}
+            {ALL_ETFS.has(s) ? `📊 ${s}` : s}
           </button>
         ))}
       </div>

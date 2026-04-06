@@ -9,7 +9,7 @@ import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
 import type { AnalysisResult } from "@/lib/stockData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Activity } from "lucide-react";
-import { NIFTY50_FULL, SPY500_FULL } from "@/lib/companyData";
+import { NIFTY50_FULL, SPY500_FULL, ETF_ENTRIES } from "@/lib/companyData";
 
 export default function OptionsTrading() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,7 +48,7 @@ export default function OptionsTrading() {
     return () => clearInterval(interval);
   }, [symbol]);
 
-  const allCompanies = [...NIFTY50_FULL, ...SPY500_FULL];
+  const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
   const company = allCompanies.find((c) => c.symbol === symbol);
   const isNifty50 = company?.etf === "nifty50";
   const yahooSymbol = symbol.includes(".") ? symbol : isNifty50 ? `${symbol}.NS` : symbol;
