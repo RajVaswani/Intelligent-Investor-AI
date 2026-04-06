@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Wallet, Zap, Clock, Brain } from "lucide-react";
 import type { HighConvictionEntry } from "./HighConvictionSignals";
 import type { LiveSignals } from "@/lib/signalEngine";
-import { recordTradeOutcome } from "@/lib/signalLearner";
+import { recordTradeOutcome, getLearnedWeights } from "@/lib/signalLearner";
 import { loadTrades, saveTrades, type PersistedTrade } from "@/lib/tradeStore";
 
 interface Props {
