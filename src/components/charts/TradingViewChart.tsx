@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 interface TradingViewChartProps {
   symbol: string;
   height?: number;
