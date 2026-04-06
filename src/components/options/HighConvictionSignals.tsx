@@ -331,7 +331,7 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
         ) : (
           <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
             <ShieldCheck className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
-            <p className="text-xs text-muted-foreground">Waiting for all 13 indicators to align…</p>
+            <p className="text-xs text-muted-foreground">Waiting for 11+ of 13 indicators to align…</p>
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">RSI · Stoch RSI · MACD · Trend · VWAP · Volume · Bollinger · Macro · Learning accuracy · Volatility · All timeframes</p>
           </div>
         )}
