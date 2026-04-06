@@ -28,12 +28,20 @@ export interface IndicatorAccuracy {
   fundamental: number;
 }
 
+export interface AccuracySnapshot {
+  timestamp: number;
+  overall: number;
+  byTimeframe: Record<number, number>;
+  totalPredictions: number;
+}
+
 export interface LearningState {
   predictions: PredictionRecord[];
   weights: IndicatorAccuracy;
   totalPredictions: number;
   correctPredictions: number;
   accuracyByTimeframe: Record<number, { total: number; correct: number }>;
+  accuracyHistory: AccuracySnapshot[];
   lastUpdated: number;
 }
 
