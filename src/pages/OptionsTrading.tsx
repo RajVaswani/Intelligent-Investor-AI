@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/dashboard/Header";
 import { SymbolSearch } from "@/components/options/SymbolSearch";
 import { LivePredictions } from "@/components/options/LivePredictions";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
 import { fetchIntradayData, type IntradayData } from "@/lib/api/optionsData";
-import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
+import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
 import type { AnalysisResult } from "@/lib/stockData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Activity } from "lucide-react";
@@ -18,9 +18,36 @@ export default function OptionsTrading() {
   const [loading, setLoading] = useState(false);
   const [intradayData, setIntradayData] = useState<IntradayData | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analyzingMacro, setAnalyzingMacro] = useState(false);
+  const analysisTriggerRef = useRef<string | null>(null);
+
+  const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
+  const company = allCompanies.find((c) => c.symbol === symbol);
+  const isNifty50 = company?.etf === "nifty50";
+  const tvSymbol = company?.tradingViewSymbol || (symbol.includes(".") ? symbol : `NASDAQ:${symbol}`);
+
+  // Auto-trigger analysis for ETFs/stocks when no cached analysis exists
+  const triggerAnalysisIfMissing = useCallback(async (sym: string) => {
+    if (analysisTriggerRef.current === sym) return; // already triggered
+    const comp = allCompanies.find((c) => c.symbol === sym);
+    if (!comp) return;
+    analysisTriggerRef.current = sym;
+    setAnalyzingMacro(true);
+    try {
+      const result = await analyzeCompany(comp);
+      setAnalysis(result);
+      toast({ title: "Analysis Ready", description: `Micro/macro data loaded for ${sym}` });
+    } catch {
+      // silent - predictions still work without it
+    } finally {
+      setAnalyzingMacro(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
 
   const loadData = useCallback(async (sym: string) => {
     setLoading(true);
+    analysisTriggerRef.current = null;
     try {
       const [intraday, cached] = await Promise.all([
         fetchIntradayData(sym),
@@ -29,12 +56,16 @@ export default function OptionsTrading() {
       setIntradayData(intraday);
       setAnalysis(cached);
       if (!intraday) toast({ title: "No data", description: `Could not load data for ${sym}`, variant: "destructive" });
+      // If no cached analysis, auto-trigger it in background
+      if (!cached) {
+        triggerAnalysisIfMissing(sym);
+      }
     } catch {
       toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, triggerAnalysisIfMissing]);
 
   useEffect(() => { loadData(symbol); }, [symbol, loadData]);
 
@@ -47,12 +78,6 @@ export default function OptionsTrading() {
     }, 1000);
     return () => clearInterval(interval);
   }, [symbol]);
-
-  const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
-  const company = allCompanies.find((c) => c.symbol === symbol);
-  const isNifty50 = company?.etf === "nifty50";
-  const yahooSymbol = symbol.includes(".") ? symbol : isNifty50 ? `${symbol}.NS` : symbol;
-  const tvSymbol = company?.tradingViewSymbol || (symbol.includes(".") ? symbol : `NASDAQ:${symbol}`);
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,6 +96,13 @@ export default function OptionsTrading() {
           <SymbolSearch value={symbol} onChange={(s) => setSearchParams({ symbol: s })} />
         </div>
 
+        {analyzingMacro && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading micro & macro analysis for {symbol}…
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -86,4 +118,3 @@ export default function OptionsTrading() {
     </div>
   );
 }
-
