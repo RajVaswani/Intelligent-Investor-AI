@@ -4,6 +4,7 @@ import type { AccuracySnapshot } from "@/lib/signalLearner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Dot } from "recharts";
 import { Crosshair, ShieldCheck, Clock, Target } from "lucide-react";
 import { SignalOutcomes } from "./SignalOutcomes";
+import { AutoTradeSimulator } from "./AutoTradeSimulator";
 
 export interface HighConvictionEntry {
   time: string;
@@ -31,86 +32,104 @@ interface Props {
 }
 
 /**
- * Determines if ALL conditions are met for a 100% conviction signal.
- * Extremely strict — only fires when every single indicator agrees.
+ * Evaluates conviction signal with 80% threshold.
+ * Fires when at least 11 out of 13 conditions are met.
  */
-export function evaluate100PctSignal(signals: LiveSignals, accuracyStats: Props["accuracyStats"]): { signal: "BUY" | "SELL" | null; reasons: string[] } {
+export function evaluate100PctSignal(signals: LiveSignals, accuracyStats: Props["accuracyStats"]): { signal: "BUY" | "SELL" | null; reasons: string[]; passedCount: number; totalChecks: number } {
   const reasons: string[] = [];
+  const failed: string[] = [];
 
   // 1. ALL timeframe predictions must agree on direction
   const preds = signals.predictions;
-  if (preds.length === 0) return { signal: null, reasons: [] };
+  if (preds.length === 0) return { signal: null, reasons: [], passedCount: 0, totalChecks: 13 };
 
   const buySignals = preds.filter(p => p.signal === "STRONG BUY" || p.signal === "BUY");
   const sellSignals = preds.filter(p => p.signal === "STRONG SELL" || p.signal === "SELL");
   const allBuy = buySignals.length === preds.length;
   const allSell = sellSignals.length === preds.length;
 
-  if (!allBuy && !allSell) return { signal: null, reasons: [] };
+  if (!allBuy && !allSell) return { signal: null, reasons: [], passedCount: 0, totalChecks: 13 };
 
   const direction: "BUY" | "SELL" = allBuy ? "BUY" : "SELL";
   reasons.push(`All ${preds.length} timeframes agree: ${direction}`);
 
-  // 2. ALL prediction confidences must be >= 80
+  let passed = 1; // timeframe agreement counts as 1
+  const totalChecks = 13;
+
+  // 2. Confidence >= 80
   const minConf = Math.min(...preds.map(p => p.confidence));
-  if (minConf < 80) return { signal: null, reasons: [] };
-  reasons.push(`Min confidence: ${minConf}%`);
+  if (minConf >= 80) { passed++; reasons.push(`Min confidence: ${minConf}%`); }
+  else failed.push(`Confidence ${minConf}% < 80%`);
 
-  // 3. RSI must confirm (not overbought for BUY, not oversold for SELL)
-  if (direction === "BUY" && signals.rsi > 65) return { signal: null, reasons: [] };
-  if (direction === "SELL" && signals.rsi < 35) return { signal: null, reasons: [] };
-  reasons.push(`RSI ${signals.rsi.toFixed(1)} confirms`);
+  // 3. RSI
+  const rsiOk = direction === "BUY" ? signals.rsi <= 65 : signals.rsi >= 35;
+  if (rsiOk) { passed++; reasons.push(`RSI ${signals.rsi.toFixed(1)} confirms`); }
+  else failed.push(`RSI ${signals.rsi.toFixed(1)}`);
 
-  // 4. Stochastic RSI must confirm
-  if (direction === "BUY" && signals.stochRsi > 70) return { signal: null, reasons: [] };
-  if (direction === "SELL" && signals.stochRsi < 30) return { signal: null, reasons: [] };
-  reasons.push(`Stoch RSI ${signals.stochRsi.toFixed(0)} confirms`);
+  // 4. Stoch RSI
+  const stochOk = direction === "BUY" ? signals.stochRsi <= 70 : signals.stochRsi >= 30;
+  if (stochOk) { passed++; reasons.push(`Stoch RSI ${signals.stochRsi.toFixed(0)} confirms`); }
+  else failed.push(`Stoch RSI ${signals.stochRsi.toFixed(0)}`);
 
-  // 5. MACD must agree
-  if (direction === "BUY" && signals.macdSignal !== "bullish") return { signal: null, reasons: [] };
-  if (direction === "SELL" && signals.macdSignal !== "bearish") return { signal: null, reasons: [] };
-  reasons.push(`MACD ${signals.macdSignal}`);
+  // 5. MACD
+  const macdOk = direction === "BUY" ? signals.macdSignal === "bullish" : signals.macdSignal === "bearish";
+  if (macdOk) { passed++; reasons.push(`MACD ${signals.macdSignal}`); }
+  else failed.push(`MACD ${signals.macdSignal}`);
 
-  // 6. Trend must align
-  if (direction === "BUY" && signals.trend !== "up") return { signal: null, reasons: [] };
-  if (direction === "SELL" && signals.trend !== "down") return { signal: null, reasons: [] };
-  reasons.push(`Trend ${signals.trend}`);
+  // 6. Trend
+  const trendOk = direction === "BUY" ? signals.trend === "up" : signals.trend === "down";
+  if (trendOk) { passed++; reasons.push(`Trend ${signals.trend}`); }
+  else failed.push(`Trend ${signals.trend}`);
 
-  // 7. VWAP must confirm
-  if (direction === "BUY" && signals.priceVsVwap !== "above") return { signal: null, reasons: [] };
-  if (direction === "SELL" && signals.priceVsVwap !== "below") return { signal: null, reasons: [] };
-  reasons.push(`Price ${signals.priceVsVwap} VWAP`);
+  // 7. VWAP
+  const vwapOk = direction === "BUY" ? signals.priceVsVwap === "above" : signals.priceVsVwap === "below";
+  if (vwapOk) { passed++; reasons.push(`Price ${signals.priceVsVwap} VWAP`); }
+  else failed.push(`VWAP: ${signals.priceVsVwap}`);
 
-  // 8. No volume-price divergence (it signals potential reversal)
-  if (signals.volumePriceDivergence) return { signal: null, reasons: [] };
-  reasons.push("No vol-price divergence");
+  // 8. No volume-price divergence
+  if (!signals.volumePriceDivergence) { passed++; reasons.push("No vol-price divergence"); }
+  else failed.push("Vol-price divergence");
 
-  // 9. Volume must be rising to confirm move
-  if (signals.volumeTrend !== "rising") return { signal: null, reasons: [] };
-  reasons.push("Volume rising");
+  // 9. Volume rising
+  if (signals.volumeTrend === "rising") { passed++; reasons.push("Volume rising"); }
+  else failed.push(`Volume ${signals.volumeTrend}`);
 
-  // 10. Bollinger Bands must not be extreme (potential reversal)
-  if (direction === "BUY" && signals.bollingerPosition > 85) return { signal: null, reasons: [] };
-  if (direction === "SELL" && signals.bollingerPosition < 15) return { signal: null, reasons: [] };
-  reasons.push(`Bollinger ${signals.bollingerPosition.toFixed(0)}% safe zone`);
+  // 10. Bollinger safe zone
+  const bollOk = direction === "BUY" ? signals.bollingerPosition <= 85 : signals.bollingerPosition >= 15;
+  if (bollOk) { passed++; reasons.push(`Bollinger ${signals.bollingerPosition.toFixed(0)}% safe zone`); }
+  else failed.push(`Bollinger ${signals.bollingerPosition.toFixed(0)}%`);
 
-  // 11. Macro must confirm (if available)
+  // 11. Macro
   if (signals.macroMicro) {
-    if (signals.macroMicro.priceConfirmation === "contradicting") return { signal: null, reasons: [] };
-    if (direction === "BUY" && signals.macroMicro.sentimentScore < 50) return { signal: null, reasons: [] };
-    if (direction === "SELL" && signals.macroMicro.sentimentScore > 50) return { signal: null, reasons: [] };
-    reasons.push(`Macro confirms (${signals.macroMicro.sentimentScore.toFixed(0)}/100)`);
+    const macroOk = signals.macroMicro.priceConfirmation !== "contradicting" &&
+      (direction === "BUY" ? signals.macroMicro.sentimentScore >= 50 : signals.macroMicro.sentimentScore <= 50);
+    if (macroOk) { passed++; reasons.push(`Macro confirms (${signals.macroMicro.sentimentScore.toFixed(0)}/100)`); }
+    else failed.push(`Macro ${signals.macroMicro.sentimentScore.toFixed(0)}/100`);
+  } else {
+    passed++; // No macro data = neutral, don't penalize
+    reasons.push("Macro: neutral (no data)");
   }
 
-  // 12. Recursive learning accuracy must be >= 60% overall with enough data
-  if (accuracyStats.total >= 20 && accuracyStats.overall < 55) return { signal: null, reasons: [] };
-  if (accuracyStats.total >= 20) reasons.push(`Learning accuracy ${accuracyStats.overall.toFixed(1)}%`);
+  // 12. Recursive learning accuracy
+  if (accuracyStats.total >= 20 && accuracyStats.overall < 55) {
+    failed.push(`Accuracy ${accuracyStats.overall.toFixed(1)}%`);
+  } else {
+    passed++;
+    if (accuracyStats.total >= 20) reasons.push(`Learning accuracy ${accuracyStats.overall.toFixed(1)}%`);
+    else reasons.push("Learning: building data");
+  }
 
-  // 13. Volatility regime must not be "high" (too unpredictable)
-  if (signals.volatilityRegime === "high") return { signal: null, reasons: [] };
-  reasons.push(`Volatility ${signals.volatilityRegime}`);
+  // 13. Volatility
+  if (signals.volatilityRegime !== "high") { passed++; reasons.push(`Volatility ${signals.volatilityRegime}`); }
+  else failed.push("High volatility");
 
-  return { signal: direction, reasons };
+  // 80% threshold = need at least 11 out of 13
+  const threshold = Math.ceil(totalChecks * 0.8); // 11
+  if (passed < threshold) return { signal: null, reasons: [], passedCount: passed, totalChecks };
+
+  if (failed.length > 0) reasons.push(`⚠ Overridden: ${failed.join(", ")}`);
+
+  return { signal: direction, reasons, passedCount: passed, totalChecks };
 }
 
 export function HighConvictionSignals({ signals, symbol, currency, accuracyStats }: Props) {
@@ -148,11 +167,11 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
         timestamp: now,
         price: signals.currentPrice,
         signal: result.signal!,
-        allAgree: true,
-        confidence: 100,
+        allAgree: result.passedCount === result.totalChecks,
+        confidence: Math.round((result.passedCount / result.totalChecks) * 100),
         reasons: result.reasons,
       }];
-      return next.slice(-50); // keep last 50 signals
+      return next.slice(-50);
     });
   }, [signals, accuracyStats]);
 
@@ -188,10 +207,10 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                100% Conviction Signals
+                80%+ Conviction Signals
                 <ShieldCheck className="h-3.5 w-3.5 text-primary" />
               </h3>
-              <p className="text-[10px] text-muted-foreground">Only fires when ALL 13 indicators align perfectly</p>
+              <p className="text-[10px] text-muted-foreground">Fires when 11+ of 13 indicators align</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -312,7 +331,7 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
         ) : (
           <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
             <ShieldCheck className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
-            <p className="text-xs text-muted-foreground">Waiting for all 13 indicators to align…</p>
+            <p className="text-xs text-muted-foreground">Waiting for 11+ of 13 indicators to align…</p>
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">RSI · Stoch RSI · MACD · Trend · VWAP · Volume · Bollinger · Macro · Learning accuracy · Volatility · All timeframes</p>
           </div>
         )}
@@ -338,6 +357,26 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
             />
           </div>
         )}
+
+        {/* Auto-Trade Simulator with P&L */}
+        <div className="mt-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Crosshair className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] uppercase text-muted-foreground font-medium">
+              Auto-Trade Simulator · Live P&L
+            </span>
+            <span className="relative flex h-1.5 w-1.5 ml-auto">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-2 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-chart-2" />
+            </span>
+            <span className="text-[9px] text-chart-2">LIVE</span>
+          </div>
+          <AutoTradeSimulator
+            history={history}
+            currentPrice={signals?.currentPrice ?? 0}
+            currency={currency}
+          />
+        </div>
 
         {/* Signal history */}
         {history.length > 1 && (

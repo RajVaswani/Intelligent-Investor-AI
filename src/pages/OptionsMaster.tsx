@@ -157,8 +157,8 @@ export default function OptionsMaster() {
                 timestamp: now,
                 price: signals.currentPrice,
                 signal: result.signal,
-                allAgree: true,
-                confidence: 100,
+                allAgree: result.passedCount === result.totalChecks,
+                confidence: Math.round((result.passedCount / result.totalChecks) * 100),
                 reasons: result.reasons,
                 symbol: sym,
               }].slice(-30);
@@ -211,7 +211,7 @@ export default function OptionsMaster() {
                 <ShieldCheck className="h-5 w-5 text-primary" />
               </h2>
               <p className="text-sm text-muted-foreground">
-                100% conviction signals across {TOP_SYMBOLS.length} symbols · Live streaming
+                80%+ conviction signals across {TOP_SYMBOLS.length} symbols · Live streaming
               </p>
             </div>
           </div>
@@ -304,15 +304,15 @@ export default function OptionsMaster() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2" />
                 </span>
               </h3>
-              <p className="text-[10px] text-muted-foreground mt-0.5">All 100% conviction signals across symbols</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">All 80%+ conviction signals across symbols</p>
             </div>
             <ScrollArea className="h-[70vh]">
               <div className="p-3 space-y-2">
                 {allSignals.length === 0 ? (
                   <div className="py-16 text-center">
                     <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground/20" />
-                    <p className="text-xs text-muted-foreground">No 100% conviction signals yet.</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">All 13 indicators must align perfectly for a signal to appear here.</p>
+                    <p className="text-xs text-muted-foreground">No 80%+ conviction signals yet.</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">At least 11 of 13 indicators must align for a signal to appear here.</p>
                   </div>
                 ) : (
                   allSignals.map((sig, i) => (
