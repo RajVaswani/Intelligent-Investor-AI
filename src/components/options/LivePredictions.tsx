@@ -95,9 +95,11 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
 
   const signals = useMemo(() => {
     if (!data?.candles) return null;
-    return computeLiveSignals(data.candles, analysisInput);
+    return computeLiveSignals(data.candles, analysisInput, symbol);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, analysisInput, tick]);
+  }, [data, analysisInput, tick, symbol]);
+
+  const accuracyStats = useMemo(() => getAccuracyStats(symbol), [symbol, tick]);
 
   if (!signals) {
     return (
