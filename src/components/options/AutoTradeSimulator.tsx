@@ -68,6 +68,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
   const [tick, setTick] = useState(0);
   const lastTradeTimeRef = useRef<number>(0);
   const processedConvictionRef = useRef<Set<number>>(new Set());
+  const currentSymbolRef = useRef<string>(symbol);
 
   // Tick every second so hold timers update smoothly
   useEffect(() => {
@@ -75,27 +76,46 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     return () => clearInterval(iv);
   }, []);
 
-  // Initialize processed conviction IDs from loaded trades
+  // Reload trades when symbol changes
   useEffect(() => {
-    for (const t of trades) {
+    if (currentSymbolRef.current !== symbol) {
+      // Save current symbol's trades before switching
+      saveTrades(currentSymbolRef.current, trades);
+      currentSymbolRef.current = symbol;
+    }
+
+    // Load trades for current symbol
+    const loaded = loadTrades(symbol);
+    setTrades(loaded);
+
+    // Reset refs for new symbol
+    processedConvictionRef.current = new Set();
+    lastTradeTimeRef.current = 0;
+
+    // Rebuild conviction refs and lastTradeTime from loaded data
+    for (const t of loaded) {
       if (t.id.startsWith("conv-")) {
         const ts = parseInt(t.id.replace("conv-", ""), 10);
         if (!isNaN(ts)) processedConvictionRef.current.add(ts);
       }
     }
-    // Set lastTradeTime from most recent trade
-    const latest = trades.reduce((max, t) => Math.max(max, t.openedAt), 0);
+    const latest = loaded.reduce((max, t) => Math.max(max, t.openedAt), 0);
     if (latest > 0) lastTradeTimeRef.current = latest;
 
     // Count already-fed trades for learning feedback display
-    const fed = trades.filter(t => t.fedToLearner && t.status === "CLOSED");
+    const fed = loaded.filter(t => t.fedToLearner && t.status === "CLOSED");
     const w = fed.filter(t => (t.pnl || 0) > 0).length;
     const l = fed.filter(t => (t.pnl || 0) <= 0).length;
     setLearningFeedback({ wins: w, losses: l });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [symbol]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist trades whenever they change
+  // Persist trades whenever they change (but only for current symbol)
+  const skipNextSaveRef = useRef(false);
   useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     saveTrades(symbol, trades);
   }, [trades, symbol]);
 
