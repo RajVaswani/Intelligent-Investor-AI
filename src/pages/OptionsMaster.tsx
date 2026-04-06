@@ -22,19 +22,6 @@ const MIN_HOLD_MS = 60_000;
 const MAX_HOLD_MS = 600_000;
 const MIN_TRADE_GAP_MS = 5000;
 
-interface Trade {
-  id: string;
-  entryPrice: number;
-  direction: "LONG" | "SHORT";
-  exitPrice: number | null;
-  pnl: number | null;
-  status: "OPEN" | "CLOSED";
-  openedAt: number;
-  closedAt: number | null;
-  reason: string;
-  fedToLearner: boolean;
-}
-
 interface SymbolState {
   symbol: string;
   name: string;
@@ -43,7 +30,7 @@ interface SymbolState {
   signals: LiveSignals | null;
   loading: boolean;
   isIndian: boolean;
-  trades: Trade[];
+  trades: PersistedTrade[];
   lastTradeTime: number;
 }
 
