@@ -58,7 +58,7 @@ function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT";
     return { direction: "SHORT", confidence: Math.min(avgConf, 99), reason: `${preds.filter(p => p.signal === "STRONG SELL" || p.signal === "SELL").length}/${preds.length} TFs bearish (${sellPct.toFixed(0)}%)` };
   }
 
-  return { direction: "HOLD", confidence: 50, reason: "Mixed signals - holding" };
+  return null; // mixed signals - hold
 }
 
 export function AutoTradeSimulator({ history, currentPrice, currency, signals }: Props) {
