@@ -135,7 +135,7 @@ export default function OptionsMaster() {
           trades = trades.map(t => {
             if (t.status === "OPEN" && (now - t.openedAt) >= MAX_HOLD_MS) {
               const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
-              const closed: Trade = { ...t, exitPrice: price, pnl: pnl * (POSITION_SIZE / t.entryPrice), status: "CLOSED", closedAt: now };
+              const closed: PersistedTrade = { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct: (pnl / t.entryPrice) * 100, status: "CLOSED", closedAt: now };
               return closed;
             }
             return t;
