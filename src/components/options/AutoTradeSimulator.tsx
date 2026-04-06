@@ -253,13 +253,33 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     );
   }
 
+  // Expose metrics globally for Options Master overview
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__autoTraderPnL = (window as any).__autoTraderPnL || {};
+      (window as any).__autoTraderPnL[symbol] = {
+        totalPnl: metrics.totalPnl,
+        realizedPnl: metrics.realizedPnl,
+        unrealizedPnl: metrics.unrealizedPnl,
+        roi: metrics.roi,
+        wins: metrics.wins,
+        losses: metrics.losses,
+        winRate: metrics.winRate,
+        totalTrades: metrics.totalTrades,
+        openTrades: metrics.openTrades.length,
+        currency,
+      };
+    }
+  }, [metrics, symbol, currency]);
+
   return (
     <div className="space-y-3">
       {/* P&L Dashboard */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <div className={`rounded-lg border p-2.5 text-center ${metrics.totalPnl >= 0 ? "border-chart-2/30 bg-chart-2/5" : "border-destructive/30 bg-destructive/5"}`}>
-          <div className="text-[9px] uppercase text-muted-foreground">Total P&L</div>
-          <div className={`text-lg font-bold font-mono ${metrics.totalPnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
+        <div className={`rounded-lg border p-2.5 text-center relative overflow-hidden ${metrics.totalPnl >= 0 ? "border-chart-2/50 bg-chart-2/10 shadow-[0_0_15px_-3px_hsl(var(--chart-2)/0.3)]" : "border-destructive/50 bg-destructive/10 shadow-[0_0_15px_-3px_hsl(var(--destructive)/0.3)]"}`}>
+          {metrics.totalPnl > 0 && <div className="absolute inset-0 bg-gradient-to-t from-chart-2/10 to-chart-2/5 pointer-events-none" />}
+          <div className="relative text-[9px] uppercase text-muted-foreground">Total P&L</div>
+          <div className={`relative text-lg font-bold font-mono ${metrics.totalPnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
             {metrics.totalPnl >= 0 ? "+" : ""}{currency}{metrics.totalPnl.toFixed(2)}
           </div>
         </div>
