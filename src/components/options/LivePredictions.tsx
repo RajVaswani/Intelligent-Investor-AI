@@ -66,7 +66,8 @@ const factorIcons: Record<string, React.ReactNode> = {
   "Media Manipulation": <Shield className="h-3.5 w-3.5" />,
 };
 
-export function LivePredictions({ data, symbol, analysis }: Props) {
+export function LivePredictions({ data, symbol, analysis, isIndian = false }: Props) {
+  const curr = isIndian ? "₹" : "$";
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
