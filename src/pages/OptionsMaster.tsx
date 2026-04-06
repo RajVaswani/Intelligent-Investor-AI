@@ -133,12 +133,24 @@ export default function OptionsMaster() {
           let lastTradeTime = state.lastTradeTime;
           const price = signals.currentPrice;
 
-          // Auto-close at max hold
+          // Auto-close: take-profit, stop-loss, max hold
           trades = trades.map(t => {
-            if (t.status === "OPEN" && (now - t.openedAt) >= MAX_HOLD_MS) {
+            if (t.status !== "OPEN") return t;
+            const pnlPct = t.direction === "LONG"
+              ? ((price - t.entryPrice) / t.entryPrice) * 100
+              : ((t.entryPrice - price) / t.entryPrice) * 100;
+            const holdTime = now - t.openedAt;
+            if (pnlPct >= TAKE_PROFIT_PCT) {
               const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
-              const closed: PersistedTrade = { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct: (pnl / t.entryPrice) * 100, status: "CLOSED", closedAt: now };
-              return closed;
+              return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct, status: "CLOSED" as const, closedAt: now, reason: `${t.reason} → ✅ TP +${pnlPct.toFixed(2)}%` };
+            }
+            if (pnlPct <= -STOP_LOSS_PCT) {
+              const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
+              return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct, status: "CLOSED" as const, closedAt: now, reason: `${t.reason} → 🛑 SL ${pnlPct.toFixed(2)}%` };
+            }
+            if (holdTime >= MAX_HOLD_MS) {
+              const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
+              return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct, status: "CLOSED" as const, closedAt: now };
             }
             return t;
           });
@@ -161,8 +173,8 @@ export default function OptionsMaster() {
               const lastOpen = openTrades[openTrades.length - 1];
 
               if (!lastOpen || lastOpen.direction !== best.direction) {
-                // Close opposite if past min hold
-                if (lastOpen && (now - lastOpen.openedAt) >= MIN_HOLD_MS) {
+                // Close opposite immediately
+                if (lastOpen) {
                   trades = trades.map(t => {
                     if (t.status === "OPEN") {
                       const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
