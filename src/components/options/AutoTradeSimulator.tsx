@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { DollarSign, TrendingUp, TrendingDown, BarChart3, ArrowUpRight, ArrowDownRight, Wallet, Zap } from "lucide-react";
+import { DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Wallet, Zap } from "lucide-react";
 import type { HighConvictionEntry } from "./HighConvictionSignals";
-import type { LiveSignals, Signal } from "@/lib/signalEngine";
+import type { LiveSignals } from "@/lib/signalEngine";
 
 interface Trade {
   id: string;
