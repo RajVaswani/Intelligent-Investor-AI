@@ -72,13 +72,15 @@ export function SymbolSearch({ value, onChange }: Props) {
           <button
             key={s}
             onClick={() => { setInput(s); onChange(s); }}
-            className={`rounded-md border px-2 py-0.5 text-xs transition-colors ${
+            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition-colors ${
               s === value
                 ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
+                : ALL_ETFS.has(s)
+                  ? "border-accent bg-accent/10 text-accent-foreground hover:border-primary/50"
+                  : "border-border text-muted-foreground hover:border-primary/50"
             }`}
           >
-            {s}
+            {ALL_ETFS.has(s) ? `📊 ${s}` : s}
           </button>
         ))}
       </div>
