@@ -157,8 +157,8 @@ export default function OptionsMaster() {
                 timestamp: now,
                 price: signals.currentPrice,
                 signal: result.signal,
-                allAgree: true,
-                confidence: 100,
+                allAgree: result.passedCount === result.totalChecks,
+                confidence: Math.round((result.passedCount / result.totalChecks) * 100),
                 reasons: result.reasons,
                 symbol: sym,
               }].slice(-30);
