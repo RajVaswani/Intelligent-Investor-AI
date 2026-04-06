@@ -243,16 +243,6 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     return { realizedPnl, unrealizedPnl, totalPnl, roi, wins, losses, winRate, openTrades, closedTrades, totalTrades: trades.length };
   }, [trades, currentPrice]);
 
-  if (trades.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
-        <Wallet className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
-        <p className="text-xs text-muted-foreground">Auto-trader active — waiting for actionable signal</p>
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Hold: 1–10 min · Feeds wins/losses to recursive learning · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
-      </div>
-    );
-  }
-
   // Expose metrics globally for Options Master overview
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -271,6 +261,16 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       };
     }
   }, [metrics, symbol, currency]);
+
+  if (trades.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
+        <Wallet className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
+        <p className="text-xs text-muted-foreground">Auto-trader active — waiting for actionable signal</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Hold: 1–10 min · Feeds wins/losses to recursive learning · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
