@@ -7,41 +7,19 @@ interface TradingViewChartProps {
   interval?: string;
 }
 
-export function TradingViewChart({ symbol, height = 400, theme = "dark", interval = "D" }: TradingViewChartProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
-
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.type = "text/javascript";
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol,
-      interval,
-      timezone: "Etc/UTC",
-      theme,
-      style: "1",
-      locale: "en",
-      allow_symbol_change: false,
-      hide_top_toolbar: false,
-      hide_legend: false,
-      save_image: false,
-      calendar: false,
-      support_host: "https://www.tradingview.com",
-      backgroundColor: "rgba(15, 17, 23, 1)",
-      gridColor: "rgba(30, 35, 45, 0.5)",
-    });
-
-    containerRef.current.appendChild(script);
-  }, [symbol, interval, theme]);
+export function TradingViewChart({ symbol, height = 400, theme = "dark", interval = "1" }: TradingViewChartProps) {
+  const src = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${encodeURIComponent(symbol)}&interval=${interval}&hidesidetoolbar=0&symboledit=0&saveimage=0&toolbarbg=f1f3f6&studies=[]&theme=${theme === "dark" ? "dark" : "light"}&style=1&timezone=Etc%2FUTC&withdateranges=1&showpopupbutton=0&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border">
-      <div ref={containerRef} style={{ height }} className="tradingview-widget-container" />
+      <iframe
+        src={src}
+        style={{ width: "100%", height }}
+        frameBorder="0"
+        allowTransparency
+        scrolling="no"
+        allowFullScreen
+      />
     </div>
   );
 }
