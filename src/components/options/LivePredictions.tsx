@@ -420,6 +420,21 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Brain className="h-4 w-4 text-primary" />
             Micro & Macro Factors Influencing Signals
+            <span className="relative flex h-2 w-2 ml-1">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-2 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2" />
+            </span>
+            <span className="text-[10px] font-normal text-chart-2">LIVE</span>
+            {signals.macroMicro.priceConfirmation && signals.macroMicro.priceConfirmation !== "neutral" && (
+              <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                signals.macroMicro.priceConfirmation === "confirming" 
+                  ? "bg-chart-2/15 text-chart-2 border border-chart-2/30" 
+                  : "bg-destructive/15 text-destructive border border-destructive/30"
+              }`}>
+                Price {signals.macroMicro.priceConfirmation === "confirming" ? "✓ confirms" : "✗ contradicts"} macro
+                {signals.macroMicro.confirmationStrength && ` (${signals.macroMicro.confirmationStrength.toFixed(2)}x)`}
+              </span>
+            )}
           </h3>
 
           {/* Score bars */}
