@@ -1,4 +1,4 @@
-import { Activity, RefreshCw, User, Shield, LogOut, ChevronDown, TrendingUp } from "lucide-react";
+import { Activity, RefreshCw, User, Shield, LogOut, ChevronDown, TrendingUp, Crosshair } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
