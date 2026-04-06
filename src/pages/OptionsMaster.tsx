@@ -304,7 +304,7 @@ export default function OptionsMaster() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2" />
                 </span>
               </h3>
-              <p className="text-[10px] text-muted-foreground mt-0.5">All 100% conviction signals across symbols</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">All 80%+ conviction signals across symbols</p>
             </div>
             <ScrollArea className="h-[70vh]">
               <div className="p-3 space-y-2">
