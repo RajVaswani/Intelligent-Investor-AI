@@ -19,29 +19,20 @@ Deno.serve(async (req) => {
       )
     }
 
-    if (type === 'intraday') {
-      // Fetch 1-minute intraday data for pattern analysis
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1m&includePrePost=false`
+    // Helper: fetch chart data from Yahoo and parse candles
+    async function fetchYahooChart(sym: string, range: string, interval: string) {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}&includePrePost=false`
       const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
-      if (!res.ok) {
-        return new Response(
-          JSON.stringify({ success: false, error: `Yahoo returned ${res.status}` }),
-          { status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      if (!res.ok) return { error: res.status }
       const chartData = await res.json()
       const result = chartData?.chart?.result?.[0]
-      if (!result) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'No intraday data' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      if (!result) return { error: 404 }
+      return { result }
+    }
 
+    function parseCandles(result: any) {
       const timestamps = result.timestamp || []
       const quote = result.indicators?.quote?.[0] || {}
-      const meta = result.meta || {}
-
       const candles = timestamps.map((ts: number, i: number) => ({
         time: ts * 1000,
         open: quote.open?.[i] ?? null,
@@ -50,16 +41,75 @@ Deno.serve(async (req) => {
         close: quote.close?.[i] ?? null,
         volume: quote.volume?.[i] ?? null,
       })).filter((c: any) => c.close !== null)
+      return candles
+    }
 
-      // Calculate VWAP
+    function addVwap(candles: any[]) {
       let cumulativeTPV = 0
       let cumulativeVolume = 0
-      const withVwap = candles.map((c: any) => {
+      // Reset VWAP daily
+      let lastDay = -1
+      return candles.map((c: any) => {
+        const day = new Date(c.time).getDate()
+        if (day !== lastDay) {
+          cumulativeTPV = 0
+          cumulativeVolume = 0
+          lastDay = day
+        }
         const tp = (c.high + c.low + c.close) / 3
         cumulativeTPV += tp * c.volume
         cumulativeVolume += c.volume
         return { ...c, vwap: cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : tp }
       })
+    }
+
+    // Historical: 60 days of data for recursive learning (2m intervals, Yahoo max for 60d)
+    if (type === 'historical') {
+      // Yahoo limits: 1m=7d, 2m=60d, 5m=60d
+      // Fetch 7d@1m + 60d@5m for comprehensive coverage
+      const [res1m, res5m] = await Promise.all([
+        fetchYahooChart(symbol, '7d', '2m'),
+        fetchYahooChart(symbol, '60d', '5m'),
+      ])
+
+      const candles1m = res1m.result ? addVwap(parseCandles(res1m.result)) : []
+      const candles5m = res5m.result ? addVwap(parseCandles(res5m.result)) : []
+      const meta = res1m.result?.meta || res5m.result?.meta || {}
+
+      // Merge: use 5m for older data, 2m for recent 7 days
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      const olderCandles = candles5m.filter((c: any) => c.time < sevenDaysAgo)
+      const merged = [...olderCandles, ...candles1m]
+
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          symbol: meta.symbol || symbol,
+          currency: meta.currency,
+          regularMarketPrice: meta.regularMarketPrice,
+          candles: merged,
+          totalCandles: merged.length,
+          ranges: { '2m_7d': candles1m.length, '5m_60d': candles5m.length },
+        }
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (type === 'intraday') {
+      // Fetch 1-minute intraday data for pattern analysis
+      const chartResult = await fetchYahooChart(symbol, '1d', '1m')
+      if (chartResult.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: `Yahoo returned ${chartResult.error}` }),
+          { status: typeof chartResult.error === 'number' ? chartResult.error : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      const result = chartResult.result
+
+      const candles = parseCandles(result)
+      const meta = result.meta || {}
+
+      // Calculate VWAP
+      const withVwap = addVwap(candles)
 
       // Support/Resistance from pivots
       const closes = candles.map((c: any) => c.close)
