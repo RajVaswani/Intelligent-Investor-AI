@@ -216,7 +216,7 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
               </div>
               <div className={`text-xl font-bold ${signalColor[p.signal]}`}>{p.signal}</div>
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="font-mono text-foreground">${p.predictedPrice.toFixed(2)}</span>
+                <span className="font-mono text-foreground">{curr}{p.predictedPrice.toFixed(2)}</span>
                 <span className={p.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}>
                   {p.predictedChange >= 0 ? "+" : ""}{p.predictedChange.toFixed(3)}%
                 </span>
