@@ -72,6 +72,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals }:
     const now = Date.now();
     if (now - lastTradeTimeRef.current < MIN_TRADE_GAP_MS) return;
 
+    const best = getBestPrediction(signals);
     if (!best) return;
 
     setTrades(prev => {
