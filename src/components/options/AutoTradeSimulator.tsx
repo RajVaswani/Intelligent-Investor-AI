@@ -69,22 +69,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     const fed = loaded.filter(t => t.fedToLearner && t.status === "CLOSED");
     return { wins: fed.filter(t => (t.pnl || 0) > 0).length, losses: fed.filter(t => (t.pnl || 0) <= 0).length };
   });
-  const [tick, setTick] = useState(0);
-  const lastTradeTimeRef = useRef<number>(() => {
-    const loaded = loadTrades(symbol);
-    return loaded.reduce((max, t) => Math.max(max, t.openedAt), 0);
-  });
-  const processedConvictionRef = useRef<Set<number>>(() => {
-    const set = new Set<number>();
-    const loaded = loadTrades(symbol);
-    for (const t of loaded) {
-      if (t.id.startsWith("conv-")) {
-        const ts = parseInt(t.id.replace("conv-", ""), 10);
-        if (!isNaN(ts)) set.add(ts);
-      }
-    }
-    return set;
-  });
+  const [_tick, setTick] = useState(0);
+  const lastTradeTimeRef = useRef<number>(0);
+  const processedConvictionRef = useRef<Set<number>>(new Set());
 
   // Tick every second so hold timers update smoothly
   useEffect(() => {
