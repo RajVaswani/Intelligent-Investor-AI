@@ -8,6 +8,7 @@ interface Props {
   data: IntradayData | null;
   symbol: string;
   analysis?: AnalysisResult | null;
+  isIndian?: boolean;
 }
 
 const signalColor: Record<Signal, string> = {
@@ -65,7 +66,8 @@ const factorIcons: Record<string, React.ReactNode> = {
   "Media Manipulation": <Shield className="h-3.5 w-3.5" />,
 };
 
-export function LivePredictions({ data, symbol, analysis }: Props) {
+export function LivePredictions({ data, symbol, analysis, isIndian = false }: Props) {
+  const curr = isIndian ? "₹" : "$";
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -134,7 +136,7 @@ export function LivePredictions({ data, symbol, analysis }: Props) {
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:justify-between">
         <div>
           <div className="text-sm text-muted-foreground">{symbol}</div>
-          <div className="text-4xl font-bold font-mono text-foreground">${signals.currentPrice.toFixed(2)}</div>
+          <div className="text-4xl font-bold font-mono text-foreground">{curr}{signals.currentPrice.toFixed(2)}</div>
           {analysisInput && (
             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
               <span className={analysisInput.sentiment === "bullish" ? "text-chart-2" : analysisInput.sentiment === "bearish" ? "text-destructive" : ""}>
@@ -171,7 +173,7 @@ export function LivePredictions({ data, symbol, analysis }: Props) {
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-[10px] uppercase text-muted-foreground">VWAP</div>
-          <div className="text-lg font-bold font-mono text-foreground">${signals.vwap.toFixed(2)}</div>
+          <div className="text-lg font-bold font-mono text-foreground">{curr}{signals.vwap.toFixed(2)}</div>
           <div className={`text-[10px] ${signals.priceVsVwap === "above" ? "text-chart-2" : signals.priceVsVwap === "below" ? "text-destructive" : "text-muted-foreground"}`}>
             Price {signals.priceVsVwap}
           </div>
@@ -214,7 +216,7 @@ export function LivePredictions({ data, symbol, analysis }: Props) {
               </div>
               <div className={`text-xl font-bold ${signalColor[p.signal]}`}>{p.signal}</div>
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="font-mono text-foreground">${p.predictedPrice.toFixed(2)}</span>
+                <span className="font-mono text-foreground">{curr}{p.predictedPrice.toFixed(2)}</span>
                 <span className={p.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}>
                   {p.predictedChange >= 0 ? "+" : ""}{p.predictedChange.toFixed(3)}%
                 </span>
