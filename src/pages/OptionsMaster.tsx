@@ -164,7 +164,7 @@ export default function OptionsMaster() {
                   trades = trades.map(t => {
                     if (t.status === "OPEN") {
                       const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
-                      return { ...t, exitPrice: price, pnl: pnl * (POSITION_SIZE / t.entryPrice), status: "CLOSED" as const, closedAt: now, fedToLearner: false };
+                      return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct: (pnl / t.entryPrice) * 100, status: "CLOSED" as const, closedAt: now, fedToLearner: false };
                     }
                     return t;
                   });
