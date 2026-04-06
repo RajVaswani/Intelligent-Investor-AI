@@ -300,7 +300,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
         <Wallet className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
         <p className="text-xs text-muted-foreground">Auto-trader active — waiting for actionable signal</p>
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Hold: 1–10 min · Feeds wins/losses to recursive learning · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">TP {TAKE_PROFIT_PCT}% · SL {STOP_LOSS_PCT}% · Recursive learning · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
       </div>
     );
   }
