@@ -3,7 +3,7 @@ import type { IntradayData } from "@/lib/api/optionsData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
 import { getAccuracyStats } from "@/lib/signalLearner";
-import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers } from "lucide-react";
 
 interface Props {
   data: IntradayData | null;
@@ -65,6 +65,10 @@ const factorIcons: Record<string, React.ReactNode> = {
   "Sector Winds": <TrendingUp className="h-3.5 w-3.5" />,
   "Regional Sentiment": <Globe className="h-3.5 w-3.5" />,
   "Media Manipulation": <Shield className="h-3.5 w-3.5" />,
+};
+
+const tfLabelMap: Record<number, string> = {
+  30: "30s", 60: "1m", 180: "3m", 300: "5m", 600: "10m", 1800: "30m", 3600: "1h",
 };
 
 export function LivePredictions({ data, symbol, analysis, isIndian = false }: Props) {
@@ -165,7 +169,7 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         </div>
       </div>
 
-      {/* Technical indicators row */}
+      {/* Technical indicators row - core */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-[10px] uppercase text-muted-foreground">RSI (14)</div>
@@ -203,42 +207,107 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         </div>
       </div>
 
-      {/* Recursive Learning Stats */}
+      {/* Enhanced indicators row (IB Academy factors) */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">Stoch RSI</div>
+          <div className={`text-lg font-bold font-mono ${signals.stochRsi > 80 ? "text-destructive" : signals.stochRsi < 20 ? "text-chart-2" : "text-foreground"}`}>
+            {signals.stochRsi.toFixed(0)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">{signals.stochRsi > 80 ? "Overbought" : signals.stochRsi < 20 ? "Oversold" : "Neutral"}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">Bollinger %</div>
+          <div className={`text-lg font-bold font-mono ${signals.bollingerPosition > 80 ? "text-destructive" : signals.bollingerPosition < 20 ? "text-chart-2" : "text-foreground"}`}>
+            {signals.bollingerPosition.toFixed(0)}%
+          </div>
+          <div className="text-[10px] text-muted-foreground">{signals.bollingerPosition > 80 ? "Upper Band" : signals.bollingerPosition < 20 ? "Lower Band" : "Mid Range"}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">MACD</div>
+          <div className="flex items-center justify-center gap-1">
+            {signals.macdSignal === "bullish" ? <TrendingUp className="h-4 w-4 text-chart-2" /> : signals.macdSignal === "bearish" ? <TrendingDown className="h-4 w-4 text-destructive" /> : <Minus className="h-4 w-4 text-muted-foreground" />}
+            <span className={`text-lg font-bold capitalize ${signals.macdSignal === "bullish" ? "text-chart-2" : signals.macdSignal === "bearish" ? "text-destructive" : "text-foreground"}`}>{signals.macdSignal}</span>
+          </div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">ATR</div>
+          <div className="text-lg font-bold font-mono text-foreground">{curr}{signals.atr.toFixed(2)}</div>
+          <div className="text-[10px] text-muted-foreground">Avg Range</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">Vol Regime</div>
+          <div className={`text-lg font-bold capitalize ${signals.volatilityRegime === "high" ? "text-destructive" : signals.volatilityRegime === "low" ? "text-chart-4" : "text-foreground"}`}>
+            {signals.volatilityRegime}
+          </div>
+          {signals.volumePriceDivergence && <div className="text-[10px] text-destructive font-medium">⚠ Divergence</div>}
+        </div>
+      </div>
+
+      {/* Support / Resistance */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-chart-2/20 bg-chart-2/5 p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">Support</div>
+          <div className="text-lg font-bold font-mono text-chart-2">{curr}{signals.supportLevel.toFixed(2)}</div>
+        </div>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-center">
+          <div className="text-[10px] uppercase text-muted-foreground">Resistance</div>
+          <div className="text-lg font-bold font-mono text-destructive">{curr}{signals.resistanceLevel.toFixed(2)}</div>
+        </div>
+      </div>
+
+      {/* Recursive Learning Stats with per-timeframe accuracy */}
       {accuracyStats.total > 0 && (
         <div className="rounded-xl border border-border bg-card p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Target className="h-4 w-4 text-primary" />
             Recursive Learning Engine
             <span className="ml-auto text-[10px] font-normal text-muted-foreground">{accuracyStats.total} predictions tracked</span>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg bg-muted/30 p-2 text-center">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-lg bg-muted/30 p-3 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Overall Accuracy</div>
-              <div className={`text-lg font-bold font-mono ${accuracyStats.overall >= 55 ? "text-chart-2" : accuracyStats.overall <= 40 ? "text-destructive" : "text-foreground"}`}>
+              <div className={`text-2xl font-bold font-mono ${accuracyStats.overall >= 55 ? "text-chart-2" : accuracyStats.overall <= 40 ? "text-destructive" : "text-foreground"}`}>
                 {accuracyStats.overall.toFixed(1)}%
               </div>
               <div className="text-[10px] text-muted-foreground">{accuracyStats.correct}/{accuracyStats.total} correct</div>
             </div>
-            <div className="rounded-lg bg-muted/30 p-2 text-center">
+            <div className="rounded-lg bg-muted/30 p-3 text-center">
               <div className="text-[10px] uppercase text-muted-foreground">Learned Weights</div>
               <div className="mt-1 flex flex-wrap justify-center gap-1 text-[9px]">
                 <span className="rounded bg-primary/10 px-1 py-0.5">RSI {(accuracyStats.weights.rsi * 100).toFixed(0)}%</span>
                 <span className="rounded bg-primary/10 px-1 py-0.5">EMA {(accuracyStats.weights.ema * 100).toFixed(0)}%</span>
                 <span className="rounded bg-primary/10 px-1 py-0.5">Mom {(accuracyStats.weights.momentum * 100).toFixed(0)}%</span>
                 <span className="rounded bg-primary/10 px-1 py-0.5">VWAP {(accuracyStats.weights.vwap * 100).toFixed(0)}%</span>
-              </div>
-            </div>
-            <div className="rounded-lg bg-muted/30 p-2 text-center">
-              <div className="text-[10px] uppercase text-muted-foreground">By Timeframe</div>
-              <div className="mt-1 flex flex-wrap justify-center gap-1 text-[9px]">
-                {Object.entries(accuracyStats.byTimeframe).slice(0, 4).map(([tf, d]) => (
-                  <span key={tf} className={`rounded px-1 py-0.5 ${d.accuracy >= 55 ? "bg-chart-2/10 text-chart-2" : d.accuracy <= 40 ? "bg-destructive/10 text-destructive" : "bg-muted text-foreground"}`}>
-                    {Number(tf) < 60 ? `${tf}s` : `${Number(tf) / 60}m`}: {d.accuracy.toFixed(0)}%
-                  </span>
-                ))}
+                <span className="rounded bg-primary/10 px-1 py-0.5">Vol {(accuracyStats.weights.volume * 100).toFixed(0)}%</span>
               </div>
             </div>
           </div>
+          {/* Per-timeframe accuracy grid */}
+          {Object.keys(accuracyStats.byTimeframe).length > 0 && (
+            <div className="mt-3">
+              <div className="mb-1 text-[10px] uppercase text-muted-foreground font-medium flex items-center gap-1">
+                <Layers className="h-3 w-3" /> Accuracy by Timeframe
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-7">
+                {Object.entries(accuracyStats.byTimeframe)
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([tf, d]) => {
+                    const label = tfLabelMap[Number(tf)] || `${tf}s`;
+                    const color = d.accuracy >= 60 ? "text-chart-2 border-chart-2/30 bg-chart-2/10" 
+                      : d.accuracy >= 45 ? "text-chart-4 border-chart-4/30 bg-chart-4/10" 
+                      : "text-destructive border-destructive/30 bg-destructive/10";
+                    return (
+                      <div key={tf} className={`rounded-lg border p-2 text-center ${color}`}>
+                        <div className="text-[10px] font-medium uppercase">{label}</div>
+                        <div className="text-sm font-bold font-mono">{d.accuracy.toFixed(0)}%</div>
+                        <div className="text-[8px] opacity-70">{d.total} pred</div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -247,39 +316,49 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Zap className="h-4 w-4 text-primary" />
           Predictions by Timeframe
-          {analysisInput && <span className="text-[10px] font-normal text-muted-foreground">(Adaptive weights · Recursive learning active)</span>}
+          {analysisInput && <span className="text-[10px] font-normal text-muted-foreground">(IB Academy Enhanced · 12 indicators · Recursive learning)</span>}
         </h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {signals.predictions.map((p) => (
-            <div key={p.label} className={`rounded-xl border p-4 transition-all ${signalBg[p.signal]}`}>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">{p.label}</span>
-                {signalIcon[p.signal]}
-              </div>
-              <div className={`text-xl font-bold ${signalColor[p.signal]}`}>{p.signal}</div>
-              <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="font-mono text-foreground">{curr}{p.predictedPrice.toFixed(2)}</span>
-                <span className={p.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}>
-                  {p.predictedChange >= 0 ? "+" : ""}{p.predictedChange.toFixed(3)}%
-                </span>
-              </div>
-              {/* Confidence bar */}
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>Confidence</span>
-                  <span>{p.confidence}%</span>
+          {signals.predictions.map((p) => {
+            const tfAccuracy = accuracyStats.byTimeframe[p.seconds];
+            return (
+              <div key={p.label} className={`rounded-xl border p-4 transition-all ${signalBg[p.signal]}`}>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">{p.label}</span>
+                  <div className="flex items-center gap-1">
+                    {tfAccuracy && (
+                      <span className={`text-[9px] font-mono rounded px-1 py-0.5 ${tfAccuracy.accuracy >= 55 ? "bg-chart-2/20 text-chart-2" : tfAccuracy.accuracy <= 40 ? "bg-destructive/20 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                        {tfAccuracy.accuracy.toFixed(0)}% acc
+                      </span>
+                    )}
+                    {signalIcon[p.signal]}
+                  </div>
                 </div>
-                <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-chart-2" : p.confidence >= 40 ? "bg-chart-4" : "bg-destructive"}`}
-                    style={{ width: `${p.confidence}%` }}
-                  />
+                <div className={`text-xl font-bold ${signalColor[p.signal]}`}>{p.signal}</div>
+                <div className="mt-2 flex items-center justify-between text-xs">
+                  <span className="font-mono text-foreground">{curr}{p.predictedPrice.toFixed(2)}</span>
+                  <span className={p.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}>
+                    {p.predictedChange >= 0 ? "+" : ""}{p.predictedChange.toFixed(3)}%
+                  </span>
                 </div>
+                {/* Confidence bar */}
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Confidence</span>
+                    <span>{p.confidence}%</span>
+                  </div>
+                  <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-chart-2" : p.confidence >= 40 ? "bg-chart-4" : "bg-destructive"}`}
+                      style={{ width: `${p.confidence}%` }}
+                    />
+                  </div>
+                </div>
+                {/* Reasoning */}
+                {p.reasoning && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{p.reasoning}</p>}
               </div>
-              {/* Reasoning */}
-              {p.reasoning && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{p.reasoning}</p>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -344,8 +423,8 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
       )}
 
       <p className="text-center text-[10px] text-muted-foreground">
-        Signals use recursive learning: predictions are tracked, verified, and weights auto-adjust to improve accuracy over time.
-        Not financial advice.
+        Enhanced with IB Traders' Academy factors: Bollinger Bands, MACD, Stochastic RSI, ATR, Support/Resistance, Volume-Price Divergence, Volatility Regime.
+        Recursive learning tracks & auto-adjusts. Not financial advice.
       </p>
     </div>
   );
