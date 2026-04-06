@@ -4,6 +4,7 @@ import type { AnalysisResult } from "@/lib/stockData";
 import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
 import { getAccuracyStats, type AccuracySnapshot } from "@/lib/signalLearner";
 import { PredictionDrilldown } from "@/components/options/PredictionDrilldown";
+import { HighConvictionSignals } from "@/components/options/HighConvictionSignals";
 import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers, LineChart } from "lucide-react";
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 
@@ -258,6 +259,9 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
           <div className="text-lg font-bold font-mono text-destructive">{curr}{signals.resistanceLevel.toFixed(2)}</div>
         </div>
       </div>
+
+      {/* 100% Conviction Signals */}
+      <HighConvictionSignals signals={signals} symbol={symbol} currency={curr} accuracyStats={{...accuracyStats, weights: accuracyStats.weights as unknown as Record<string, number>}} />
 
       {/* Recursive Learning Stats with per-timeframe accuracy */}
       {accuracyStats.total > 0 && (
