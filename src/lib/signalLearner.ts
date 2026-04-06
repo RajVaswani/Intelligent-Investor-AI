@@ -158,6 +158,24 @@ export function verifyPredictions(symbol: string, currentPrice: number): void {
   if (changed) {
     state.lastUpdated = now;
     adjustWeights(state);
+
+    // Record accuracy snapshot (max 200 points)
+    const overallAcc = state.totalPredictions > 0
+      ? (state.correctPredictions / state.totalPredictions) * 100 : 0;
+    const tfSnap: Record<number, number> = {};
+    for (const [tf, d] of Object.entries(state.accuracyByTimeframe)) {
+      tfSnap[Number(tf)] = d.total > 0 ? (d.correct / d.total) * 100 : 0;
+    }
+    state.accuracyHistory.push({
+      timestamp: now,
+      overall: overallAcc,
+      byTimeframe: tfSnap,
+      totalPredictions: state.totalPredictions,
+    });
+    if (state.accuracyHistory.length > 200) {
+      state.accuracyHistory = state.accuracyHistory.slice(-200);
+    }
+
     saveState(symbol, state);
   }
 }
