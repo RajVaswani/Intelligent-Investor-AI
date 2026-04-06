@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Wallet, Zap, Clock, Brain } from "lucide-react";
 import type { HighConvictionEntry } from "./HighConvictionSignals";
 import type { LiveSignals } from "@/lib/signalEngine";
-import { recordTradeOutcome } from "@/lib/signalLearner";
+import { recordTradeOutcome, getLearnedWeights } from "@/lib/signalLearner";
 import { loadTrades, saveTrades, type PersistedTrade } from "@/lib/tradeStore";
 
 interface Props {
@@ -68,6 +68,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
   const [tick, setTick] = useState(0);
   const lastTradeTimeRef = useRef<number>(0);
   const processedConvictionRef = useRef<Set<number>>(new Set());
+  const currentSymbolRef = useRef<string>(symbol);
 
   // Tick every second so hold timers update smoothly
   useEffect(() => {
@@ -75,27 +76,46 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     return () => clearInterval(iv);
   }, []);
 
-  // Initialize processed conviction IDs from loaded trades
+  // Reload trades when symbol changes
   useEffect(() => {
-    for (const t of trades) {
+    if (currentSymbolRef.current !== symbol) {
+      // Save current symbol's trades before switching
+      saveTrades(currentSymbolRef.current, trades);
+      currentSymbolRef.current = symbol;
+    }
+
+    // Load trades for current symbol
+    const loaded = loadTrades(symbol);
+    setTrades(loaded);
+
+    // Reset refs for new symbol
+    processedConvictionRef.current = new Set();
+    lastTradeTimeRef.current = 0;
+
+    // Rebuild conviction refs and lastTradeTime from loaded data
+    for (const t of loaded) {
       if (t.id.startsWith("conv-")) {
         const ts = parseInt(t.id.replace("conv-", ""), 10);
         if (!isNaN(ts)) processedConvictionRef.current.add(ts);
       }
     }
-    // Set lastTradeTime from most recent trade
-    const latest = trades.reduce((max, t) => Math.max(max, t.openedAt), 0);
+    const latest = loaded.reduce((max, t) => Math.max(max, t.openedAt), 0);
     if (latest > 0) lastTradeTimeRef.current = latest;
 
     // Count already-fed trades for learning feedback display
-    const fed = trades.filter(t => t.fedToLearner && t.status === "CLOSED");
+    const fed = loaded.filter(t => t.fedToLearner && t.status === "CLOSED");
     const w = fed.filter(t => (t.pnl || 0) > 0).length;
     const l = fed.filter(t => (t.pnl || 0) <= 0).length;
     setLearningFeedback({ wins: w, losses: l });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [symbol]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist trades whenever they change
+  // Persist trades whenever they change (but only for current symbol)
+  const skipNextSaveRef = useRef(false);
   useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     saveTrades(symbol, trades);
   }, [trades, symbol]);
 
@@ -328,22 +348,42 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       </div>
 
       {/* Learning feedback bar */}
-      {(learningFeedback.wins + learningFeedback.losses > 0) && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-2 flex items-center gap-2">
-          <Brain className="h-4 w-4 text-primary" />
-          <div className="flex-1">
-            <div className="text-[9px] uppercase text-muted-foreground mb-0.5">Recursive Learning Feedback</div>
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="text-chart-2 font-mono font-bold">{learningFeedback.wins} wins → weights reinforced</span>
-              <span className="text-destructive font-mono font-bold">{learningFeedback.losses} losses → weights adjusted</span>
+      {(learningFeedback.wins + learningFeedback.losses > 0) && (() => {
+        const w = getLearnedWeights(symbol);
+        return (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-2 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary" />
+              <div className="flex-1">
+                <div className="text-[9px] uppercase text-muted-foreground mb-0.5">Recursive Learning Engine — Live</div>
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span className="text-chart-2 font-mono font-bold">{learningFeedback.wins} wins → reinforced</span>
+                  <span className="text-destructive font-mono font-bold">{learningFeedback.losses} losses → adjusted</span>
+                </div>
+              </div>
+              <div className="text-[9px] text-muted-foreground">
+                <Clock className="h-3 w-3 inline mr-0.5" />
+                1–10m hold
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { label: "RSI", val: w.rsi },
+                { label: "EMA", val: w.ema },
+                { label: "VWAP", val: w.vwap },
+                { label: "Mom", val: w.momentum },
+                { label: "Vol", val: w.volume },
+                { label: "Fund", val: w.fundamental },
+              ].map(ind => (
+                <div key={ind.label} className="flex items-center gap-0.5 rounded bg-muted/50 px-1.5 py-0.5">
+                  <span className="text-[8px] text-muted-foreground">{ind.label}</span>
+                  <span className="text-[9px] font-mono font-bold text-primary">{(ind.val * 100).toFixed(0)}%</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="text-[9px] text-muted-foreground">
-            <Clock className="h-3 w-3 inline mr-0.5" />
-            1–10m hold
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Capital bar */}
       <div className="rounded-lg border border-border bg-muted/20 p-2">
