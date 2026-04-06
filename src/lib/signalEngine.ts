@@ -32,6 +32,8 @@ export interface TimeframePrediction {
 export interface MacroMicroInfluence {
   sentimentScore: number;
   macroScore: number;
+  priceConfirmation?: "confirming" | "contradicting" | "neutral";
+  confirmationStrength?: number;
   details: {
     label: string;
     impact: "bullish" | "bearish" | "neutral";
