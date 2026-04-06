@@ -478,6 +478,14 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         Enhanced with IB Traders' Academy factors: Bollinger Bands, MACD, Stochastic RSI, ATR, Support/Resistance, Volume-Price Divergence, Volatility Regime.
         Recursive learning tracks & auto-adjusts. Not financial advice.
       </p>
+
+      <PredictionDrilldown
+        symbol={symbol}
+        timeframeSeconds={drilldownTF ?? 60}
+        open={drilldownTF !== null}
+        onOpenChange={(open) => { if (!open) setDrilldownTF(null); }}
+        currency={curr}
+      />
     </div>
   );
 }
