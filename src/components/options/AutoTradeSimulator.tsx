@@ -62,13 +62,16 @@ function closeTrade(t: PersistedTrade, price: number, now: number, reason?: stri
 }
 
 export function AutoTradeSimulator({ history, currentPrice, currency, signals, symbol = "SPY" }: Props) {
-  // Load persisted trades on mount
+  // Load persisted trades on mount (key={symbol} ensures remount per symbol)
   const [trades, setTrades] = useState<PersistedTrade[]>(() => loadTrades(symbol));
-  const [learningFeedback, setLearningFeedback] = useState<{ wins: number; losses: number }>({ wins: 0, losses: 0 });
-  const [tick, setTick] = useState(0);
+  const [learningFeedback, setLearningFeedback] = useState<{ wins: number; losses: number }>(() => {
+    const loaded = loadTrades(symbol);
+    const fed = loaded.filter(t => t.fedToLearner && t.status === "CLOSED");
+    return { wins: fed.filter(t => (t.pnl || 0) > 0).length, losses: fed.filter(t => (t.pnl || 0) <= 0).length };
+  });
+  const [_tick, setTick] = useState(0);
   const lastTradeTimeRef = useRef<number>(0);
   const processedConvictionRef = useRef<Set<number>>(new Set());
-  const currentSymbolRef = useRef<string>(symbol);
 
   // Tick every second so hold timers update smoothly
   useEffect(() => {
@@ -76,23 +79,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     return () => clearInterval(iv);
   }, []);
 
-  // Reload trades when symbol changes
+  // Initialize refs on mount
   useEffect(() => {
-    if (currentSymbolRef.current !== symbol) {
-      // Save current symbol's trades before switching
-      saveTrades(currentSymbolRef.current, trades);
-      currentSymbolRef.current = symbol;
-    }
-
-    // Load trades for current symbol
     const loaded = loadTrades(symbol);
-    setTrades(loaded);
-
-    // Reset refs for new symbol
-    processedConvictionRef.current = new Set();
-    lastTradeTimeRef.current = 0;
-
-    // Rebuild conviction refs and lastTradeTime from loaded data
     for (const t of loaded) {
       if (t.id.startsWith("conv-")) {
         const ts = parseInt(t.id.replace("conv-", ""), 10);
@@ -101,21 +90,10 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     }
     const latest = loaded.reduce((max, t) => Math.max(max, t.openedAt), 0);
     if (latest > 0) lastTradeTimeRef.current = latest;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Count already-fed trades for learning feedback display
-    const fed = loaded.filter(t => t.fedToLearner && t.status === "CLOSED");
-    const w = fed.filter(t => (t.pnl || 0) > 0).length;
-    const l = fed.filter(t => (t.pnl || 0) <= 0).length;
-    setLearningFeedback({ wins: w, losses: l });
-  }, [symbol]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Persist trades whenever they change (but only for current symbol)
-  const skipNextSaveRef = useRef(false);
+  // Persist trades whenever they change
   useEffect(() => {
-    if (skipNextSaveRef.current) {
-      skipNextSaveRef.current = false;
-      return;
-    }
     saveTrades(symbol, trades);
   }, [trades, symbol]);
 
