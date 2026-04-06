@@ -212,9 +212,9 @@ Respond with this JSON structure ONLY:
     const analysisText = aiJson?.choices?.[0]?.message?.content || '{}'
     let analysis
     try {
-      analysis = JSON.parse(analysisText)
-    } catch {
-      console.error('Failed to parse AI response:', analysisText)
+      analysis = extractJsonFromResponse(analysisText)
+    } catch (parseErr) {
+      console.error('Failed to parse AI response:', analysisText.substring(0, 500), '...truncated')
       return new Response(JSON.stringify({ success: false, error: 'Failed to parse AI analysis' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
