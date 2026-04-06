@@ -67,6 +67,7 @@ function loadState(symbol: string): LearningState {
     totalPredictions: 0,
     correctPredictions: 0,
     accuracyByTimeframe: {},
+    accuracyHistory: [],
     lastUpdated: Date.now(),
   };
 }
