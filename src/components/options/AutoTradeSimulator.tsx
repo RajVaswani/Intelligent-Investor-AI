@@ -356,7 +356,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
               </div>
               <div className="text-[9px] text-muted-foreground">
                 <Clock className="h-3 w-3 inline mr-0.5" />
-                1–10m hold
+                TP {TAKE_PROFIT_PCT}% · SL {STOP_LOSS_PCT}%
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">

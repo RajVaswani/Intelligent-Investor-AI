@@ -454,7 +454,7 @@ export default function OptionsMaster() {
                   <div className="py-16 text-center">
                     <Zap className="mx-auto mb-2 h-8 w-8 text-muted-foreground/20" />
                     <p className="text-xs text-muted-foreground">No trades closed yet.</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">Auto-traders are scanning and trading — results appear here after 1–10m hold.</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">Auto-traders are scanning and trading — results appear after TP/SL hit.</p>
                   </div>
                 ) : (
                   recentTrades.map((t, i) => (
