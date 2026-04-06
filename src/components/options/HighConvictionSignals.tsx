@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import type { LiveSignals, Signal } from "@/lib/signalEngine";
 import type { AccuracySnapshot } from "@/lib/signalLearner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Dot } from "recharts";
-import { Crosshair, ShieldCheck, Clock } from "lucide-react";
+import { Crosshair, ShieldCheck, Clock, Target } from "lucide-react";
+import { SignalOutcomes } from "./SignalOutcomes";
 
 export interface HighConvictionEntry {
   time: string;
