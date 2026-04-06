@@ -178,7 +178,6 @@ export default function OptionsMaster() {
                     exitPrice: null, exitTime: null, pnl: null, pnlPct: null, status: "OPEN", openedAt: now, closedAt: null,
                     reason: best.reason, confidence: best.confidence, fedToLearner: false,
                   });
-                  });
                 }
               }
             }
