@@ -195,6 +195,36 @@ export default function OptionsMaster() {
   const activeCount = symbolSummaries.filter(s => s.signals).length;
   const totalSignals = allSignals.length;
 
+  // Read global auto-trader P&L data
+  const [traderPnL, setTraderPnL] = useState<Record<string, any>>({});
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof window !== "undefined" && (window as any).__autoTraderPnL) {
+        setTraderPnL({ ...(window as any).__autoTraderPnL });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const aggregatePnL = useMemo(() => {
+    const entries = Object.entries(traderPnL);
+    if (entries.length === 0) return null;
+    let totalPnl = 0, totalRealized = 0, totalUnrealized = 0, totalWins = 0, totalLosses = 0, totalTrades = 0, openPositions = 0;
+    const perSymbol: { symbol: string; pnl: number; roi: number; wins: number; losses: number; trades: number; currency: string }[] = [];
+    for (const [sym, data] of entries) {
+      totalPnl += data.totalPnl || 0;
+      totalRealized += data.realizedPnl || 0;
+      totalUnrealized += data.unrealizedPnl || 0;
+      totalWins += data.wins || 0;
+      totalLosses += data.losses || 0;
+      totalTrades += data.totalTrades || 0;
+      openPositions += data.openTrades || 0;
+      perSymbol.push({ symbol: sym, pnl: data.totalPnl || 0, roi: data.roi || 0, wins: data.wins || 0, losses: data.losses || 0, trades: data.totalTrades || 0, currency: data.currency || "$" });
+    }
+    const winRate = (totalWins + totalLosses) > 0 ? (totalWins / (totalWins + totalLosses)) * 100 : 0;
+    return { totalPnl, totalRealized, totalUnrealized, totalWins, totalLosses, winRate, totalTrades, openPositions, perSymbol: perSymbol.sort((a, b) => b.pnl - a.pnl) };
+  }, [traderPnL]);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -227,6 +257,76 @@ export default function OptionsMaster() {
             <span className="rounded-full bg-chart-2/10 px-3 py-1 text-xs font-mono text-chart-2">{totalSignals} signals</span>
           </div>
         </div>
+
+        {/* Aggregate Auto-Trader P&L Overview */}
+        {aggregatePnL && (
+          <div className={`mb-4 rounded-2xl border-2 p-4 ${aggregatePnL.totalPnl >= 0 ? "border-chart-2/40 bg-chart-2/5 shadow-[0_0_20px_-5px_hsl(var(--chart-2)/0.3)]" : "border-destructive/40 bg-destructive/5 shadow-[0_0_20px_-5px_hsl(var(--destructive)/0.3)]"}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Auto-Trader P&L Overview</h3>
+              <Brain className="h-4 w-4 text-primary/60" />
+              <span className="text-[10px] text-muted-foreground">Self-learning · All symbols</span>
+              <span className="ml-auto relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              <span className="text-[10px] text-primary font-medium">LIVE</span>
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 mb-3">
+              <div className={`rounded-lg border p-2.5 text-center relative overflow-hidden ${aggregatePnL.totalPnl >= 0 ? "border-chart-2/50 bg-chart-2/10" : "border-destructive/50 bg-destructive/10"}`}>
+                {aggregatePnL.totalPnl > 0 && <div className="absolute inset-0 bg-gradient-to-t from-chart-2/10 to-chart-2/5 pointer-events-none" />}
+                <div className="relative text-[9px] uppercase text-muted-foreground">Total P&L</div>
+                <div className={`relative text-xl font-bold font-mono ${aggregatePnL.totalPnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
+                  {aggregatePnL.totalPnl >= 0 ? "+" : ""}${aggregatePnL.totalPnl.toFixed(2)}
+                </div>
+              </div>
+              <div className={`rounded-lg border p-2.5 text-center ${aggregatePnL.totalRealized >= 0 ? "border-chart-2/20 bg-chart-2/5" : "border-destructive/20 bg-destructive/5"}`}>
+                <div className="text-[9px] uppercase text-muted-foreground">Realized</div>
+                <div className={`text-lg font-bold font-mono ${aggregatePnL.totalRealized >= 0 ? "text-chart-2" : "text-destructive"}`}>
+                  {aggregatePnL.totalRealized >= 0 ? "+" : ""}${aggregatePnL.totalRealized.toFixed(2)}
+                </div>
+              </div>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-center">
+                <div className="text-[9px] uppercase text-muted-foreground">Win Rate</div>
+                <div className="text-lg font-bold font-mono text-primary">{aggregatePnL.winRate.toFixed(0)}%</div>
+                <div className="text-[9px] text-muted-foreground">{aggregatePnL.totalWins}W / {aggregatePnL.totalLosses}L</div>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-2.5 text-center">
+                <div className="text-[9px] uppercase text-muted-foreground">Total Trades</div>
+                <div className="text-lg font-bold font-mono text-foreground">{aggregatePnL.totalTrades}</div>
+                <div className="text-[9px] text-muted-foreground">{aggregatePnL.openPositions} open</div>
+              </div>
+              <div className={`rounded-lg border p-2.5 text-center ${aggregatePnL.totalUnrealized >= 0 ? "border-chart-2/20 bg-chart-2/5" : "border-destructive/20 bg-destructive/5"}`}>
+                <div className="text-[9px] uppercase text-muted-foreground">Unrealized</div>
+                <div className={`text-sm font-bold font-mono ${aggregatePnL.totalUnrealized >= 0 ? "text-chart-2" : "text-destructive"}`}>
+                  {aggregatePnL.totalUnrealized >= 0 ? "+" : ""}${aggregatePnL.totalUnrealized.toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Per-symbol P&L breakdown */}
+            <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+              {aggregatePnL.perSymbol.map(s => (
+                <button
+                  key={s.symbol}
+                  onClick={() => navigate(`/options?symbol=${s.symbol}`)}
+                  className={`rounded-lg border p-2 flex items-center gap-2 text-left transition-all hover:shadow-sm cursor-pointer ${
+                    s.pnl >= 0 ? "border-chart-2/20 bg-chart-2/5 hover:border-chart-2/40" : "border-destructive/20 bg-destructive/5 hover:border-destructive/40"
+                  }`}
+                >
+                  <span className="text-xs font-bold text-foreground w-12">{s.symbol}</span>
+                  <span className={`text-xs font-bold font-mono flex-1 ${s.pnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
+                    {s.pnl >= 0 ? "+" : ""}{s.currency}{s.pnl.toFixed(2)}
+                  </span>
+                  <span className="text-[9px] text-muted-foreground">{s.wins}W/{s.losses}L</span>
+                  <span className="text-[9px] text-muted-foreground">{s.trades}t</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Left: Symbol cards grid */}
