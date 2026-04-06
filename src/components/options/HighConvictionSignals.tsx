@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import type { LiveSignals, Signal } from "@/lib/signalEngine";
 import type { AccuracySnapshot } from "@/lib/signalLearner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Dot } from "recharts";
-import { Crosshair, ShieldCheck, Clock } from "lucide-react";
+import { Crosshair, ShieldCheck, Clock, Target } from "lucide-react";
+import { SignalOutcomes } from "./SignalOutcomes";
 
 export interface HighConvictionEntry {
   time: string;
@@ -313,6 +314,28 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
             <ShieldCheck className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
             <p className="text-xs text-muted-foreground">Waiting for all 13 indicators to align…</p>
             <p className="text-[10px] text-muted-foreground/60 mt-0.5">RSI · Stoch RSI · MACD · Trend · VWAP · Volume · Bollinger · Macro · Learning accuracy · Volatility · All timeframes</p>
+          </div>
+        )}
+
+        {/* Signal Outcomes - Win/Loss Evidence */}
+        {history.length > 0 && (
+          <div className="mt-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Target className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] uppercase text-muted-foreground font-medium">
+                Signal Evidence (1 / 5 / 10 min)
+              </span>
+              <span className="relative flex h-1.5 w-1.5 ml-auto">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+              <span className="text-[9px] text-primary">LIVE</span>
+            </div>
+            <SignalOutcomes
+              history={history}
+              currentPrice={signals?.currentPrice ?? 0}
+              currency={currency}
+            />
           </div>
         )}
 
