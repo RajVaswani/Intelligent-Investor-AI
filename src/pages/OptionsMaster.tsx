@@ -8,7 +8,7 @@ import { getAccuracyStats, recordTradeOutcome } from "@/lib/signalLearner";
 import { loadTrades, saveTrades, type PersistedTrade } from "@/lib/tradeStore";
 import type { AnalysisResult } from "@/lib/stockData";
 import { NIFTY50_FULL, SPY500_FULL, ETF_ENTRIES } from "@/lib/companyData";
-import { Crosshair, Brain, DollarSign, Loader2, ExternalLink, TrendingUp, TrendingDown, Zap, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Activity } from "lucide-react";
+import { Crosshair, Brain, DollarSign, Loader2, ExternalLink, Zap, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Activity } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 const TOP_SYMBOLS = [
   "SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "NFLX",
