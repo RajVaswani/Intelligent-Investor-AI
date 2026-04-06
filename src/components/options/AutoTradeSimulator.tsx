@@ -32,33 +32,29 @@ function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT";
   const preds = signals.predictions;
   if (!preds || preds.length === 0) return null;
 
-  // Count directional votes weighted by confidence
-  let buyScore = 0, sellScore = 0, holdScore = 0;
+  // Take the best call — use the highest-confidence prediction directly
+  let bestPred = preds[0];
   for (const p of preds) {
-    if (p.signal === "STRONG BUY") buyScore += p.confidence * 1.5;
-    else if (p.signal === "BUY") buyScore += p.confidence;
-    else if (p.signal === "STRONG SELL") sellScore += p.confidence * 1.5;
-    else if (p.signal === "SELL") sellScore += p.confidence;
-    else holdScore += p.confidence;
+    if (p.confidence > bestPred.confidence) bestPred = p;
   }
 
-  const total = buyScore + sellScore + holdScore;
-  if (total === 0) return null;
+  const isBuy = bestPred.signal === "STRONG BUY" || bestPred.signal === "BUY";
+  const isSell = bestPred.signal === "STRONG SELL" || bestPred.signal === "SELL";
 
-  const buyPct = (buyScore / total) * 100;
-  const sellPct = (sellScore / total) * 100;
-
-  // Need at least 55% directional consensus to act
-  if (buyPct > 55) {
-    const avgConf = Math.round(buyScore / preds.filter(p => p.signal === "STRONG BUY" || p.signal === "BUY").length || 50);
-    return { direction: "LONG", confidence: Math.min(avgConf, 99), reason: `${preds.filter(p => p.signal === "STRONG BUY" || p.signal === "BUY").length}/${preds.length} TFs bullish (${buyPct.toFixed(0)}%)` };
-  }
-  if (sellPct > 55) {
-    const avgConf = Math.round(sellScore / preds.filter(p => p.signal === "STRONG SELL" || p.signal === "SELL").length || 50);
-    return { direction: "SHORT", confidence: Math.min(avgConf, 99), reason: `${preds.filter(p => p.signal === "STRONG SELL" || p.signal === "SELL").length}/${preds.length} TFs bearish (${sellPct.toFixed(0)}%)` };
+  if (!isBuy && !isSell) {
+    // Even on HOLD, check if there's any buy/sell with decent confidence
+    const actionable = preds.filter(p => p.signal !== "HOLD");
+    if (actionable.length === 0) return null;
+    const top = actionable.reduce((a, b) => a.confidence > b.confidence ? a : b);
+    const dir = top.signal === "STRONG BUY" || top.signal === "BUY" ? "LONG" : "SHORT";
+    return { direction: dir, confidence: top.confidence, reason: `${top.signal} on ${top.label || "best TF"} (${top.confidence}% conf)` };
   }
 
-  return null; // mixed signals - hold
+  return {
+    direction: isBuy ? "LONG" : "SHORT",
+    confidence: bestPred.confidence,
+    reason: `${bestPred.signal} on ${bestPred.label || "best TF"} (${bestPred.confidence}% conf)`,
+  };
 }
 
 export function AutoTradeSimulator({ history, currentPrice, currency, signals }: Props) {
