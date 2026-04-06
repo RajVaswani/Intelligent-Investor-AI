@@ -127,6 +127,13 @@ export default function OptionsTrading() {
           </div>
         )}
 
+        {historicalStatus && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-chart-4/20 bg-chart-4/5 px-4 py-2 text-sm text-chart-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {historicalStatus}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
