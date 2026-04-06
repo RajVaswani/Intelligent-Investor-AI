@@ -258,7 +258,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals }:
         </div>
         <div className="flex justify-between mt-1">
           <span className="text-[9px] text-muted-foreground">Unrealized: {metrics.unrealizedPnl >= 0 ? "+" : ""}{currency}{metrics.unrealizedPnl.toFixed(2)}</span>
-          <span className="text-[9px] text-muted-foreground">Mode: Best Prediction (55%+ consensus)</span>
+          <span className="text-[9px] text-muted-foreground">Mode: Best Prediction (no consensus needed)</span>
         </div>
       </div>
 
