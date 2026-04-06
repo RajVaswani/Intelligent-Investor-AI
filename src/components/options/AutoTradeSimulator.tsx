@@ -15,9 +15,11 @@ interface Props {
 
 const STARTING_CAPITAL = 10000;
 const POSITION_SIZE = 1000;
-const MIN_HOLD_MS = 60_000;
-const MAX_HOLD_MS = 600_000;
-const MIN_TRADE_GAP_MS = 5000;
+const MIN_HOLD_MS = 0;        // No minimum hold — book P&L immediately
+const MAX_HOLD_MS = 300_000;   // 5 min safety net
+const MIN_TRADE_GAP_MS = 1000; // 1 second between trades
+const TAKE_PROFIT_PCT = 0.15;  // Book profit at 0.15%
+const STOP_LOSS_PCT = 0.20;    // Cut loss at 0.20%
 
 function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT"; confidence: number; reason: string } | null {
   const preds = signals.predictions;
