@@ -301,11 +301,15 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
                       : d.accuracy >= 45 ? "text-chart-4 border-chart-4/30 bg-chart-4/10" 
                       : "text-destructive border-destructive/30 bg-destructive/10";
                     return (
-                      <div key={tf} className={`rounded-lg border p-2 text-center ${color}`}>
+                      <button
+                        key={tf}
+                        onClick={() => setDrilldownTF(Number(tf))}
+                        className={`rounded-lg border p-2 text-center transition-all hover:ring-2 hover:ring-primary/40 cursor-pointer ${color}`}
+                      >
                         <div className="text-[10px] font-medium uppercase">{label}</div>
                         <div className="text-sm font-bold font-mono">{d.accuracy.toFixed(0)}%</div>
-                        <div className="text-[8px] opacity-70">{d.total} pred</div>
-                      </div>
+                        <div className="text-[8px] opacity-70">{d.total} pred · click</div>
+                      </button>
                     );
                   })}
               </div>
