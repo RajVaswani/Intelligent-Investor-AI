@@ -207,10 +207,10 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                100% Conviction Signals
+                80%+ Conviction Signals
                 <ShieldCheck className="h-3.5 w-3.5 text-primary" />
               </h3>
-              <p className="text-[10px] text-muted-foreground">Only fires when ALL 13 indicators align perfectly</p>
+              <p className="text-[10px] text-muted-foreground">Fires when 11+ of 13 indicators align</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
