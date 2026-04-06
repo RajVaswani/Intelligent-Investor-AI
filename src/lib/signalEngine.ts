@@ -267,22 +267,29 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
   }
 
   // Final composite: shorter timeframes = more technical, longer = more fundamental
+  // Use learned fundamental weight to adjust the split
+  const fundW = learnedW.fundamental;
   const timeframes = [
-    { label: "30 sec", seconds: 30, techWeight: 0.95 },
-    { label: "1 min", seconds: 60, techWeight: 0.90 },
-    { label: "3 min", seconds: 180, techWeight: 0.80 },
-    { label: "5 min", seconds: 300, techWeight: 0.70 },
-    { label: "10 min", seconds: 600, techWeight: 0.55 },
-    { label: "30 min", seconds: 1800, techWeight: 0.40 },
-    { label: "1 hour", seconds: 3600, techWeight: 0.30 },
+    { label: "30 sec", seconds: 30, techWeight: Math.max(0.80, 1 - fundW * 0.12) },
+    { label: "1 min", seconds: 60, techWeight: Math.max(0.75, 1 - fundW * 0.25) },
+    { label: "3 min", seconds: 180, techWeight: Math.max(0.60, 1 - fundW * 0.50) },
+    { label: "5 min", seconds: 300, techWeight: Math.max(0.50, 1 - fundW * 0.75) },
+    { label: "10 min", seconds: 600, techWeight: Math.max(0.35, 1 - fundW * 1.0) },
+    { label: "30 min", seconds: 1800, techWeight: Math.max(0.25, 1 - fundW * 1.5) },
+    { label: "1 hour", seconds: 3600, techWeight: Math.max(0.15, 1 - fundW * 1.8) },
   ];
 
   const recentCloses = closes.slice(-30);
-  const velocity = recentCloses.length > 1
-    ? (recentCloses[recentCloses.length - 1] - recentCloses[0]) / recentCloses.length
-    : 0;
+
+  // Use multi-lookback momentum for velocity instead of simple slope
   const candleIntervalSec = candles.length > 1 ? (candles[candles.length - 1].time - candles[candles.length - 2].time) / 1000 : 60;
-  const velocityPerSec = velocity / candleIntervalSec;
+
+  // Weighted velocity: recent momentum matters more
+  const velocity3 = mom3 / 100 * currentPrice / (3 * candleIntervalSec);
+  const velocity5 = mom5 / 100 * currentPrice / (5 * candleIntervalSec);
+  const velocity10 = mom10 / 100 * currentPrice / (10 * candleIntervalSec);
+  // Use shorter lookback for shorter timeframes via blending
+  const velocityPerSec = velocity3 * 0.5 + velocity5 * 0.3 + velocity10 * 0.2;
 
   const returns: number[] = [];
   for (let i = 1; i < recentCloses.length; i++) {
@@ -293,17 +300,21 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
   const volatility = Math.sqrt(variance);
 
   const predictions: TimeframePrediction[] = timeframes.map(tf => {
-    const tw = analysis ? tf.techWeight : 1; // if no analysis, 100% technical
+    const tw = analysis ? tf.techWeight : 1;
     const compositeScore = technicalScore * tw + fundamentalScore * (1 - tw);
 
+    // Reduced mean reversion for short timeframes (momentum continuation)
     const tfFactor = Math.min(tf.seconds / 60, 10);
-    const reversion = (50 - compositeScore) * 0.02 * tfFactor;
+    const reversionStrength = tf.seconds <= 60 ? 0.005 : tf.seconds <= 300 ? 0.01 : 0.02;
+    const reversion = (50 - compositeScore) * reversionStrength * tfFactor;
     const adjustedScore = Math.max(0, Math.min(100, compositeScore + reversion));
 
+    // Use momentum-direction-aware price projection
     const projectedMove = velocityPerSec * tf.seconds;
-    // Adjust projection by fundamental bias for longer timeframes
+    // Add momentum acceleration factor for short timeframes
+    const accelFactor = tf.seconds <= 180 ? momAcceleration / 100 * currentPrice * tf.seconds * 0.001 : 0;
     const fundBias = (fundamentalScore - 50) / 50 * 0.001 * tf.seconds * (1 - tw);
-    const predictedPrice = currentPrice + projectedMove + currentPrice * fundBias;
+    const predictedPrice = currentPrice + projectedMove + accelFactor + currentPrice * fundBias;
     const predictedChange = ((predictedPrice - currentPrice) / currentPrice) * 100;
 
     const baseConfidence = 85;
@@ -312,14 +323,20 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
     const analysisBonusConf = analysis ? 1.1 : 1;
     const confidence = Math.min(95, Math.round(baseConfidence * timeDecay * volPenalty * analysisBonusConf));
 
-    // Build reasoning
+    // Build reasoning with learned weights info
     const parts: string[] = [];
     if (tw >= 0.5) {
-      parts.push(`Technical (${(tw * 100).toFixed(0)}%): RSI ${rsi.toFixed(1)}, EMA ${trend}, VWAP ${priceVsVwap}, Mom ${momentum >= 0 ? "+" : ""}${momentum.toFixed(3)}%`);
+      parts.push(`Tech (${(tw * 100).toFixed(0)}%): RSI ${rsi.toFixed(1)}, EMA ${emaAlignment}, VWAP ${priceVsVwap}, Mom ${mom3 >= 0 ? "+" : ""}${mom3.toFixed(3)}%/${mom10 >= 0 ? "+" : ""}${mom10.toFixed(3)}%`);
     }
     if (analysis && tw < 1) {
-      parts.push(`Fundamental (${((1 - tw) * 100).toFixed(0)}%): ${analysis.sentiment} sentiment, score ${analysis.overallScore}/100${analysis.recommendation ? `, ${analysis.recommendation}` : ""}`);
+      parts.push(`Fund (${((1 - tw) * 100).toFixed(0)}%): ${analysis.sentiment}, score ${analysis.overallScore}${analysis.recommendation ? `, ${analysis.recommendation}` : ""}`);
     }
+    if (momAcceleration !== 0) {
+      parts.push(`Accel: ${momAcceleration > 0 ? "↑" : "↓"}`);
+    }
+
+    // Record prediction for learning
+    recordPrediction(sym, tf.seconds, predictedPrice, currentPrice);
 
     return {
       label: tf.label,
