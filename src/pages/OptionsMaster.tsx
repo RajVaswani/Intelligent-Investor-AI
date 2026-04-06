@@ -211,7 +211,7 @@ export default function OptionsMaster() {
                 <ShieldCheck className="h-5 w-5 text-primary" />
               </h2>
               <p className="text-sm text-muted-foreground">
-                100% conviction signals across {TOP_SYMBOLS.length} symbols · Live streaming
+                80%+ conviction signals across {TOP_SYMBOLS.length} symbols · Live streaming
               </p>
             </div>
           </div>
