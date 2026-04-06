@@ -261,7 +261,7 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
       </div>
 
       {/* 100% Conviction Signals */}
-      <HighConvictionSignals signals={signals} symbol={symbol} currency={curr} accuracyStats={accuracyStats} />
+      <HighConvictionSignals signals={signals} symbol={symbol} currency={curr} accuracyStats={{...accuracyStats, weights: accuracyStats.weights as unknown as Record<string, number>}} />
 
       {/* Recursive Learning Stats with per-timeframe accuracy */}
       {accuracyStats.total > 0 && (
