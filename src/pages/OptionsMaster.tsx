@@ -183,7 +183,9 @@ export default function OptionsMaster() {
             }
           }
 
-          next[sym] = { ...state, signals, trades: trades.slice(-100), lastTradeTime };
+          const finalTrades = trades.slice(-500);
+          saveTrades(sym, finalTrades);
+          next[sym] = { ...state, signals, trades: finalTrades, lastTradeTime };
         }
         return next;
       });
