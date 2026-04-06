@@ -3,22 +3,7 @@ import { DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Wallet, Zap, Clock
 import type { HighConvictionEntry } from "./HighConvictionSignals";
 import type { LiveSignals } from "@/lib/signalEngine";
 import { recordTradeOutcome } from "@/lib/signalLearner";
-
-interface Trade {
-  id: string;
-  entryPrice: number;
-  direction: "LONG" | "SHORT";
-  exitPrice: number | null;
-  exitTime: string | null;
-  pnl: number | null;
-  pnlPct: number | null;
-  status: "OPEN" | "CLOSED";
-  closedAt: number | null;
-  openedAt: number;
-  reason: string;
-  confidence: number;
-  fedToLearner: boolean;
-}
+import { loadTrades, saveTrades, type PersistedTrade } from "@/lib/tradeStore";
 
 interface Props {
   history: HighConvictionEntry[];
@@ -30,8 +15,8 @@ interface Props {
 
 const STARTING_CAPITAL = 10000;
 const POSITION_SIZE = 1000;
-const MIN_HOLD_MS = 60_000;   // 1 min minimum hold
-const MAX_HOLD_MS = 600_000;  // 10 min maximum hold
+const MIN_HOLD_MS = 60_000;
+const MAX_HOLD_MS = 600_000;
 const MIN_TRADE_GAP_MS = 5000;
 
 function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT"; confidence: number; reason: string } | null {
@@ -61,7 +46,7 @@ function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT";
   };
 }
 
-function closeTrade(t: Trade, price: number, now: number, reason?: string): Trade {
+function closeTrade(t: PersistedTrade, price: number, now: number, reason?: string): PersistedTrade {
   const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
   const pnlPct = (pnl / t.entryPrice) * 100;
   return {
@@ -77,12 +62,37 @@ function closeTrade(t: Trade, price: number, now: number, reason?: string): Trad
 }
 
 export function AutoTradeSimulator({ history, currentPrice, currency, signals, symbol = "SPY" }: Props) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  // Load persisted trades on mount
+  const [trades, setTrades] = useState<PersistedTrade[]>(() => loadTrades(symbol));
   const [learningFeedback, setLearningFeedback] = useState<{ wins: number; losses: number }>({ wins: 0, losses: 0 });
   const lastTradeTimeRef = useRef<number>(0);
   const processedConvictionRef = useRef<Set<number>>(new Set());
 
-  // Auto-close trades at MAX hold time & enforce MIN hold time
+  // Initialize processed conviction IDs from loaded trades
+  useEffect(() => {
+    for (const t of trades) {
+      if (t.id.startsWith("conv-")) {
+        const ts = parseInt(t.id.replace("conv-", ""), 10);
+        if (!isNaN(ts)) processedConvictionRef.current.add(ts);
+      }
+    }
+    // Set lastTradeTime from most recent trade
+    const latest = trades.reduce((max, t) => Math.max(max, t.openedAt), 0);
+    if (latest > 0) lastTradeTimeRef.current = latest;
+
+    // Count already-fed trades for learning feedback display
+    const fed = trades.filter(t => t.fedToLearner && t.status === "CLOSED");
+    const w = fed.filter(t => (t.pnl || 0) > 0).length;
+    const l = fed.filter(t => (t.pnl || 0) <= 0).length;
+    setLearningFeedback({ wins: w, losses: l });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist trades whenever they change
+  useEffect(() => {
+    saveTrades(symbol, trades);
+  }, [trades, symbol]);
+
+  // Auto-close trades at MAX hold time
   useEffect(() => {
     if (currentPrice <= 0) return;
     const now = Date.now();
@@ -92,8 +102,6 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       const updated = prev.map(t => {
         if (t.status !== "OPEN") return t;
         const holdTime = now - t.openedAt;
-
-        // Force close at max hold time
         if (holdTime >= MAX_HOLD_MS) {
           changed = true;
           return closeTrade(t, currentPrice, now, "Max 10m hold");
@@ -136,15 +144,11 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       const openTrades = prev.filter(t => t.status === "OPEN");
       const lastOpen = openTrades[openTrades.length - 1];
 
-      // If same direction open, skip
       if (lastOpen && lastOpen.direction === best.direction) return prev;
-
-      // If opposite direction open but under MIN hold time, skip
       if (lastOpen && (now - lastOpen.openedAt) < MIN_HOLD_MS) return prev;
 
       let updated = [...prev];
 
-      // Close opposite open trades (only if past min hold)
       updated = updated.map(t => {
         if (t.status === "OPEN" && t.direction !== best.direction && (now - t.openedAt) >= MIN_HOLD_MS) {
           return closeTrade(t, currentPrice, now, "Signal flip");
@@ -152,13 +156,13 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         return t;
       });
 
-      // Only open if no open trades remain (or we just closed them)
       const stillOpen = updated.filter(t => t.status === "OPEN");
-      if (stillOpen.length > 0) return updated.slice(-200);
+      if (stillOpen.length > 0) return updated.slice(-500);
 
       lastTradeTimeRef.current = now;
       updated.push({
         id: `trade-${now}`,
+        symbol,
         entryPrice: currentPrice,
         direction: best.direction,
         exitPrice: null,
@@ -173,9 +177,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         fedToLearner: false,
       });
 
-      return updated.slice(-200);
+      return updated.slice(-500);
     });
-  }, [signals, currentPrice]);
+  }, [signals, currentPrice, symbol]);
 
   // Conviction signals (higher priority)
   useEffect(() => {
@@ -191,7 +195,6 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
 
         const newDirection = signal.signal === "BUY" ? "LONG" : "SHORT";
 
-        // Close opposite (conviction overrides min hold)
         updated = updated.map(t => {
           if (t.status === "OPEN" && t.direction !== newDirection) {
             return closeTrade(t, currentPrice, now, "⚡ Conviction override");
@@ -202,6 +205,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         lastTradeTimeRef.current = signal.timestamp;
         updated.push({
           id: `conv-${signal.timestamp}`,
+          symbol,
           entryPrice: signal.price,
           direction: newDirection as "LONG" | "SHORT",
           exitPrice: null,
@@ -217,9 +221,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         });
       }
 
-      return updated.slice(-200);
+      return updated.slice(-500);
     });
-  }, [history, currentPrice]);
+  }, [history, currentPrice, symbol]);
 
   // Calculate metrics
   const metrics = useMemo(() => {

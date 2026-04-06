@@ -5,11 +5,11 @@ import { fetchIntradayData, type IntradayData } from "@/lib/api/optionsData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
 import { computeLiveSignals, type LiveSignals, type AnalysisInput } from "@/lib/signalEngine";
 import { getAccuracyStats, recordTradeOutcome } from "@/lib/signalLearner";
+import { loadTrades, saveTrades, type PersistedTrade } from "@/lib/tradeStore";
 import type { AnalysisResult } from "@/lib/stockData";
 import { NIFTY50_FULL, SPY500_FULL, ETF_ENTRIES } from "@/lib/companyData";
-import { Crosshair, Brain, DollarSign, Loader2, ExternalLink, TrendingUp, TrendingDown, Zap, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Activity } from "lucide-react";
+import { Crosshair, Brain, DollarSign, Loader2, ExternalLink, Zap, ArrowUpRight, ArrowDownRight, Clock, BarChart3, Activity } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 const TOP_SYMBOLS = [
   "SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "NFLX",
   "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
@@ -22,19 +22,6 @@ const MIN_HOLD_MS = 60_000;
 const MAX_HOLD_MS = 600_000;
 const MIN_TRADE_GAP_MS = 5000;
 
-interface Trade {
-  id: string;
-  entryPrice: number;
-  direction: "LONG" | "SHORT";
-  exitPrice: number | null;
-  pnl: number | null;
-  status: "OPEN" | "CLOSED";
-  openedAt: number;
-  closedAt: number | null;
-  reason: string;
-  fedToLearner: boolean;
-}
-
 interface SymbolState {
   symbol: string;
   name: string;
@@ -43,7 +30,7 @@ interface SymbolState {
   signals: LiveSignals | null;
   loading: boolean;
   isIndian: boolean;
-  trades: Trade[];
+  trades: PersistedTrade[];
   lastTradeTime: number;
 }
 
@@ -79,7 +66,7 @@ export default function OptionsMaster() {
       const comp = allCompanies.find(c => c.symbol === sym);
       initial[sym] = {
         symbol: sym, name: comp?.name || sym, intradayData: null, analysis: null, signals: null,
-        loading: true, isIndian: comp?.etf === "nifty50", trades: [], lastTradeTime: 0,
+        loading: true, isIndian: comp?.etf === "nifty50", trades: loadTrades(sym), lastTradeTime: 0,
       };
     }
     setSymbolStates(initial);
@@ -148,7 +135,7 @@ export default function OptionsMaster() {
           trades = trades.map(t => {
             if (t.status === "OPEN" && (now - t.openedAt) >= MAX_HOLD_MS) {
               const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
-              const closed: Trade = { ...t, exitPrice: price, pnl: pnl * (POSITION_SIZE / t.entryPrice), status: "CLOSED", closedAt: now };
+              const closed: PersistedTrade = { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct: (pnl / t.entryPrice) * 100, status: "CLOSED", closedAt: now };
               return closed;
             }
             return t;
@@ -177,7 +164,7 @@ export default function OptionsMaster() {
                   trades = trades.map(t => {
                     if (t.status === "OPEN") {
                       const pnl = t.direction === "LONG" ? price - t.entryPrice : t.entryPrice - price;
-                      return { ...t, exitPrice: price, pnl: pnl * (POSITION_SIZE / t.entryPrice), status: "CLOSED" as const, closedAt: now, fedToLearner: false };
+                      return { ...t, exitPrice: price, exitTime: new Date(now).toLocaleTimeString(), pnl: pnl * (POSITION_SIZE / t.entryPrice), pnlPct: (pnl / t.entryPrice) * 100, status: "CLOSED" as const, closedAt: now, fedToLearner: false };
                     }
                     return t;
                   });
@@ -187,16 +174,18 @@ export default function OptionsMaster() {
                 if (stillOpen === 0) {
                   lastTradeTime = now;
                   trades.push({
-                    id: `${sym}-${now}`, entryPrice: price, direction: best.direction,
-                    exitPrice: null, pnl: null, status: "OPEN", openedAt: now, closedAt: null,
-                    reason: best.reason, fedToLearner: false,
+                    id: `${sym}-${now}`, symbol: sym, entryPrice: price, direction: best.direction,
+                    exitPrice: null, exitTime: null, pnl: null, pnlPct: null, status: "OPEN", openedAt: now, closedAt: null,
+                    reason: best.reason, confidence: best.confidence, fedToLearner: false,
                   });
                 }
               }
             }
           }
 
-          next[sym] = { ...state, signals, trades: trades.slice(-100), lastTradeTime };
+          const finalTrades = trades.slice(-500);
+          saveTrades(sym, finalTrades);
+          next[sym] = { ...state, signals, trades: finalTrades, lastTradeTime };
         }
         return next;
       });
