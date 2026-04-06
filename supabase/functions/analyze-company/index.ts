@@ -4,6 +4,81 @@ const corsHeaders = {
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
+function extractJsonFromResponse(response: string): any {
+  // Remove markdown code blocks
+  let cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim()
+
+  // Try direct parse first
+  try {
+    return JSON.parse(cleaned)
+  } catch { /* continue */ }
+
+  // Find JSON boundaries
+  const jsonStart = cleaned.indexOf('{')
+  if (jsonStart === -1) throw new Error('No JSON object found in response')
+
+  cleaned = cleaned.substring(jsonStart)
+
+  // Try parse the extracted object
+  try {
+    return JSON.parse(cleaned)
+  } catch { /* continue to repair */ }
+
+  // Fix common issues: trailing commas, control characters
+  cleaned = cleaned
+    .replace(/,\s*}/g, '}')
+    .replace(/,\s*]/g, ']')
+    .replace(/[\x00-\x1F\x7F]/g, (ch) => ch === '\n' || ch === '\t' ? ch : '')
+
+  try {
+    return JSON.parse(cleaned)
+  } catch { /* continue to repair truncation */ }
+
+  // Repair truncated JSON - count braces and brackets
+  let braces = 0, brackets = 0, inString = false, escaped = false
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (ch === '{') braces++
+    else if (ch === '}') braces--
+    else if (ch === '[') brackets++
+    else if (ch === ']') brackets--
+  }
+
+  // If we're inside a string, close it
+  if (inString) cleaned += '"'
+  // Remove any trailing partial key-value (after last comma)
+  const lastComplete = Math.max(cleaned.lastIndexOf('},'), cleaned.lastIndexOf('",'), cleaned.lastIndexOf('],'))
+  if (lastComplete > 0 && (braces > 0 || brackets > 0)) {
+    cleaned = cleaned.substring(0, lastComplete + 1)
+    // Recount
+    braces = 0; brackets = 0; inString = false; escaped = false
+    for (let i = 0; i < cleaned.length; i++) {
+      const ch = cleaned[i]
+      if (escaped) { escaped = false; continue }
+      if (ch === '\\') { escaped = true; continue }
+      if (ch === '"') { inString = !inString; continue }
+      if (inString) continue
+      if (ch === '{') braces++
+      else if (ch === '}') braces--
+      else if (ch === '[') brackets++
+      else if (ch === ']') brackets--
+    }
+  }
+
+  // Add missing closing brackets/braces
+  while (brackets > 0) { cleaned += ']'; brackets-- }
+  while (braces > 0) { cleaned += '}'; braces-- }
+
+  return JSON.parse(cleaned)
+}
+
 async function firecrawlSearch(apiKey: string, query: string, limit: number): Promise<{ text: string; results: any[] }> {
   try {
     const res = await fetch('https://api.firecrawl.dev/v1/search', {
