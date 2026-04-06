@@ -8,19 +8,49 @@ interface TradingViewChartProps {
 }
 
 export function TradingViewChart({ symbol, height = 400, theme = "dark", interval = "1" }: TradingViewChartProps) {
-  const src = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=${encodeURIComponent(symbol)}&interval=${interval}&hidesidetoolbar=0&symboledit=0&saveimage=0&toolbarbg=f1f3f6&studies=[]&theme=${theme === "dark" ? "dark" : "light"}&style=1&timezone=Etc%2FUTC&withdateranges=1&showpopupbutton=0&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=[]&locale=en&utm_source=localhost`;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = "";
+
+    const widgetDiv = document.createElement("div");
+    widgetDiv.id = "tradingview_advanced_" + Math.random().toString(36).slice(2);
+    containerRef.current.appendChild(widgetDiv);
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/tv.js";
+    script.async = true;
+    script.onload = () => {
+      if ((window as any).TradingView) {
+        new (window as any).TradingView.widget({
+          container_id: widgetDiv.id,
+          symbol,
+          interval,
+          timezone: "Etc/UTC",
+          theme: theme === "dark" ? "dark" : "light",
+          style: "1",
+          locale: "en",
+          toolbar_bg: "#f1f3f6",
+          enable_publishing: false,
+          allow_symbol_change: true,
+          save_image: false,
+          height,
+          width: "100%",
+          hide_side_toolbar: false,
+          studies: ["RSI@tv-basicstudies", "MACD@tv-basicstudies"],
+        });
+      }
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      try { document.head.removeChild(script); } catch {}
+    };
+  }, [symbol, height, theme, interval]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      <iframe
-        src={src}
-        style={{ width: "100%", height }}
-        frameBorder="0"
-        allowTransparency
-        scrolling="no"
-        allowFullScreen
-      />
-    </div>
+    <div ref={containerRef} className="overflow-hidden rounded-xl border border-border" style={{ height }} />
   );
 }
 
