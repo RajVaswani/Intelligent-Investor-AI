@@ -58,7 +58,11 @@ function loadState(symbol: string): LearningState {
     if (raw) {
       const state = JSON.parse(raw) as LearningState;
       // Validate weights sum roughly to expected values
-      if (state.weights && state.predictions) return state;
+      if (state.weights && state.predictions) {
+        if (!state.accuracyHistory) state.accuracyHistory = [];
+        if (!state.accuracyByTimeframe) state.accuracyByTimeframe = {};
+        return state;
+      }
     }
   } catch { /* ignore */ }
   return {
