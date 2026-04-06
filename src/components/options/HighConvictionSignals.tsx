@@ -4,7 +4,7 @@ import type { AccuracySnapshot } from "@/lib/signalLearner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Dot } from "recharts";
 import { Crosshair, ShieldCheck, Clock } from "lucide-react";
 
-interface HighConvictionEntry {
+export interface HighConvictionEntry {
   time: string;
   timestamp: number;
   price: number;
@@ -12,6 +12,7 @@ interface HighConvictionEntry {
   allAgree: boolean;
   confidence: number;
   reasons: string[];
+  symbol?: string;
 }
 
 interface Props {
