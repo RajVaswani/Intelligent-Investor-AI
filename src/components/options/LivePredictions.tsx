@@ -8,6 +8,7 @@ interface Props {
   data: IntradayData | null;
   symbol: string;
   analysis?: AnalysisResult | null;
+  isIndian?: boolean;
 }
 
 const signalColor: Record<Signal, string> = {

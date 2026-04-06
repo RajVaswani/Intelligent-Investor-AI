@@ -79,12 +79,8 @@ export default function OptionsTrading() {
           </div>
         ) : (
           <div className="space-y-4">
-            {isNifty50 ? (
-              <RealTimeChart symbol={symbol} yahooSymbol={yahooSymbol} height={1000} refreshInterval={1000} />
-            ) : (
-              <TradingViewChart symbol={tvSymbol} height={2000} interval="1" />
-            )}
-            <LivePredictions data={intradayData} symbol={symbol} analysis={analysis} />
+            <TradingViewChart symbol={tvSymbol} height={isNifty50 ? 1000 : 2000} interval="1" />
+            <LivePredictions data={intradayData} symbol={symbol} analysis={analysis} isIndian={isNifty50} />
           </div>
         )}
       </div>
