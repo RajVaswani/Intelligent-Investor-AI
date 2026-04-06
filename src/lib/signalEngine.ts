@@ -15,7 +15,7 @@
  */
 
 import type { IntradayCandle } from "@/lib/api/optionsData";
-import { getLearnedWeights, recordPrediction, verifyPredictions, type IndicatorAccuracy } from "@/lib/signalLearner";
+import { getLearnedWeights, recordPrediction, verifyPredictions, type IndicatorAccuracy, type PredictionContext } from "@/lib/signalLearner";
 
 export type Signal = "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL";
 
