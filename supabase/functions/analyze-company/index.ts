@@ -4,6 +4,81 @@ const corsHeaders = {
 }
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
+function extractJsonFromResponse(response: string): any {
+  // Remove markdown code blocks
+  let cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim()
+
+  // Try direct parse first
+  try {
+    return JSON.parse(cleaned)
+  } catch { /* continue */ }
+
+  // Find JSON boundaries
+  const jsonStart = cleaned.indexOf('{')
+  if (jsonStart === -1) throw new Error('No JSON object found in response')
+
+  cleaned = cleaned.substring(jsonStart)
+
+  // Try parse the extracted object
+  try {
+    return JSON.parse(cleaned)
+  } catch { /* continue to repair */ }
+
+  // Fix common issues: trailing commas, control characters
+  cleaned = cleaned
+    .replace(/,\s*}/g, '}')
+    .replace(/,\s*]/g, ']')
+    .replace(/[\x00-\x1F\x7F]/g, (ch) => ch === '\n' || ch === '\t' ? ch : '')
+
+  try {
+    return JSON.parse(cleaned)
+  } catch { /* continue to repair truncation */ }
+
+  // Repair truncated JSON - count braces and brackets
+  let braces = 0, brackets = 0, inString = false, escaped = false
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (ch === '{') braces++
+    else if (ch === '}') braces--
+    else if (ch === '[') brackets++
+    else if (ch === ']') brackets--
+  }
+
+  // If we're inside a string, close it
+  if (inString) cleaned += '"'
+  // Remove any trailing partial key-value (after last comma)
+  const lastComplete = Math.max(cleaned.lastIndexOf('},'), cleaned.lastIndexOf('",'), cleaned.lastIndexOf('],'))
+  if (lastComplete > 0 && (braces > 0 || brackets > 0)) {
+    cleaned = cleaned.substring(0, lastComplete + 1)
+    // Recount
+    braces = 0; brackets = 0; inString = false; escaped = false
+    for (let i = 0; i < cleaned.length; i++) {
+      const ch = cleaned[i]
+      if (escaped) { escaped = false; continue }
+      if (ch === '\\') { escaped = true; continue }
+      if (ch === '"') { inString = !inString; continue }
+      if (inString) continue
+      if (ch === '{') braces++
+      else if (ch === '}') braces--
+      else if (ch === '[') brackets++
+      else if (ch === ']') brackets--
+    }
+  }
+
+  // Add missing closing brackets/braces
+  while (brackets > 0) { cleaned += ']'; brackets-- }
+  while (braces > 0) { cleaned += '}'; braces-- }
+
+  return JSON.parse(cleaned)
+}
+
 async function firecrawlSearch(apiKey: string, query: string, limit: number): Promise<{ text: string; results: any[] }> {
   try {
     const res = await fetch('https://api.firecrawl.dev/v1/search', {
@@ -154,16 +229,16 @@ Respond with this JSON structure ONLY:
   "websiteInsights": "<3-4 sentences on company digital presence, products, strategy from website>",
   "financialHighlights": "<5-6 sentences with specific revenue, profit, margin, growth numbers from quarterly/annual reports>",
   "newsDigest": "<5-6 sentences on all recent news, analyst opinions, market reactions, upgrades/downgrades>",
-  "detailedAnalysis": "<10-12 sentences: valuation, growth drivers, competitive moat, market positioning, capital allocation, sector trends>",
-  "competitivePosition": "<5-6 sentences on competitive advantages, market share, peer comparison, barriers to entry, disruption threats>",
-  "managementOutlook": "<4-5 sentences on management quality, strategic direction, guidance, capital deployment, track record>",
+  "detailedAnalysis": "<6-8 sentences: valuation, growth drivers, competitive moat, capital allocation>",
+  "competitivePosition": "<4-5 sentences on competitive advantages, market share, disruption threats>",
+  "managementOutlook": "<3-4 sentences on management quality, strategic direction, track record>",
 
-  "geopoliticalAnalysis": "<6-8 sentences: how current wars, sanctions, trade policies, tariffs, diplomatic tensions affect this company and sector. Be specific about which geopolitical events matter and quantify impact where possible>",
-  "controversyScanner": "<6-8 sentences: any scandals, scams, bribes, corruption cases, lawsuits, fraud investigations, murders/crimes linked to management, regulatory penalties, whistleblower complaints. If none found, explain the company's governance track record. Be brutally honest>",
-  "macroEconomicFactors": "<6-8 sentences: how interest rates, inflation, GDP growth, currency movements, central bank policy, government spending affect this stock. Include specific numbers like rate levels, inflation %, GDP growth %>",
-  "sectorTailwindsHeadwinds": "<5-6 sentences: industry-level forces - AI disruption, regulation changes, supply chain shifts, demographic trends, ESG pressures, technology obsolescence>",
-  "regionalSentiment": "<5-6 sentences: region-specific buy/sell dynamics - retail vs institutional flows, FII/DII activity (for India), political climate impact on markets, election cycle effects, cultural factors driving stock price>",
-  "mediaManipulationCheck": "<5-6 sentences: assessment of fake news risk, social media pump-and-dump signals, media bias in coverage, paid news vs genuine analysis, anomalous trading patterns suggesting manipulation>",
+  "geopoliticalAnalysis": "<4-5 sentences: how geopolitical events affect this company specifically>",
+  "controversyScanner": "<4-5 sentences: scandals, lawsuits, fraud. If none, say so briefly>",
+  "macroEconomicFactors": "<4-5 sentences: interest rates, inflation, GDP, currency impact with numbers>",
+  "sectorTailwindsHeadwinds": "<3-4 sentences: industry forces - AI, regulation, supply chain>",
+  "regionalSentiment": "<3-4 sentences: region buy/sell dynamics, institutional flows>",
+  "mediaManipulationCheck": "<3-4 sentences: fake news risk, pump-dump signals, media bias>",
 
   "strengths": ["<strength 1 with data>", "<strength 2>", "<strength 3>", "<strength 4>", "<strength 5>", "<strength 6>"],
   "risks": ["<risk 1 with data>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>", "<risk 6>"],
@@ -173,8 +248,8 @@ Respond with this JSON structure ONLY:
   "priceTarget1y": <predicted price 1 year>,
   "recommendation": "<buy|hold|sell>",
   "confidenceScore": <0-100>,
-  "predictionReasoning": "<6-8 sentences: explain prediction rationale incorporating BOTH micro fundamentals AND macro forces. Cite specific catalysts, risks, valuation metrics, geopolitical factors, and macro trends that drive the price targets>",
-  "stockSplitCaveat": "<If this stock has had any stock splits (e.g. NVDA 10:1 in June 2024, TSLA 3:1 in 2022, AMZN 20:1 in 2022, AAPL 4:1 in 2020, GOOG 20:1 in 2022, etc.), provide a clear caveat explaining the split date, ratio, and how it affects historical price comparisons and current price levels. Note that all price targets above are POST-SPLIT prices. If no recent split occurred, return null>"
+  "predictionReasoning": "<4-5 sentences: prediction rationale with micro and macro factors>",
+  "stockSplitCaveat": "<Brief note if stock had recent splits with date and ratio, else null>"
 }`
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -212,9 +287,9 @@ Respond with this JSON structure ONLY:
     const analysisText = aiJson?.choices?.[0]?.message?.content || '{}'
     let analysis
     try {
-      analysis = JSON.parse(analysisText)
-    } catch {
-      console.error('Failed to parse AI response:', analysisText)
+      analysis = extractJsonFromResponse(analysisText)
+    } catch (parseErr) {
+      console.error('Failed to parse AI response:', analysisText.substring(0, 500), '...truncated')
       return new Response(JSON.stringify({ success: false, error: 'Failed to parse AI analysis' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
