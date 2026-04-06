@@ -188,7 +188,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     });
   }, [signals, currentPrice, symbol]);
 
-  // Conviction signals (higher priority)
+  // Conviction signals (higher priority — but still respect MIN_HOLD)
   useEffect(() => {
     if (history.length === 0) return;
     const now = Date.now();
@@ -201,13 +201,22 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         processedConvictionRef.current.add(signal.timestamp);
 
         const newDirection = signal.signal === "BUY" ? "LONG" : "SHORT";
+        const openTrades = updated.filter(t => t.status === "OPEN");
 
+        // Don't open if already holding same direction
+        if (openTrades.some(t => t.direction === newDirection)) continue;
+
+        // Close opposite trades only if past MIN_HOLD
         updated = updated.map(t => {
-          if (t.status === "OPEN" && t.direction !== newDirection) {
+          if (t.status === "OPEN" && t.direction !== newDirection && (now - t.openedAt) >= MIN_HOLD_MS) {
             return closeTrade(t, currentPrice, now, "⚡ Conviction override");
           }
           return t;
         });
+
+        // Only open new trade if no open positions remain
+        const stillOpen = updated.filter(t => t.status === "OPEN");
+        if (stillOpen.length > 0) continue;
 
         lastTradeTimeRef.current = signal.timestamp;
         updated.push({
