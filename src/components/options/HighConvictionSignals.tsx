@@ -375,6 +375,7 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
             history={history}
             currentPrice={signals?.currentPrice ?? 0}
             currency={currency}
+            signals={signals}
           />
         </div>
 
