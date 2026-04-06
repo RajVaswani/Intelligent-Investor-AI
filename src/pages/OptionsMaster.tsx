@@ -66,7 +66,7 @@ export default function OptionsMaster() {
       const comp = allCompanies.find(c => c.symbol === sym);
       initial[sym] = {
         symbol: sym, name: comp?.name || sym, intradayData: null, analysis: null, signals: null,
-        loading: true, isIndian: comp?.etf === "nifty50", trades: [], lastTradeTime: 0,
+        loading: true, isIndian: comp?.etf === "nifty50", trades: loadTrades(sym), lastTradeTime: 0,
       };
     }
     setSymbolStates(initial);
