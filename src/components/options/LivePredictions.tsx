@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import type { IntradayData } from "@/lib/api/optionsData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
-import { getAccuracyStats } from "@/lib/signalLearner";
-import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers } from "lucide-react";
+import { getAccuracyStats, type AccuracySnapshot } from "@/lib/signalLearner";
+import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers, LineChart } from "lucide-react";
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 
 interface Props {
   data: IntradayData | null;
