@@ -163,14 +163,15 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       const openTrades = prev.filter(t => t.status === "OPEN");
       const lastOpen = openTrades[openTrades.length - 1];
 
+      // Same direction already open — skip
       if (lastOpen && lastOpen.direction === best.direction) return prev;
-      if (lastOpen && (now - lastOpen.openedAt) < MIN_HOLD_MS) return prev;
 
       let updated = [...prev];
 
+      // Close any opposite trades immediately on signal flip
       updated = updated.map(t => {
-        if (t.status === "OPEN" && t.direction !== best.direction && (now - t.openedAt) >= MIN_HOLD_MS) {
-          return closeTrade(t, currentPrice, now, "Signal flip");
+        if (t.status === "OPEN" && t.direction !== best.direction) {
+          return closeTrade(t, currentPrice, now, "⚡ Signal flip");
         }
         return t;
       });
