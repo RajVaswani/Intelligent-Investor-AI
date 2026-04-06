@@ -23,7 +23,7 @@ interface Props {
     total: number;
     correct: number;
     byTimeframe: Record<number, { accuracy: number; total: number }>;
-    weights: Record<string, number>;
+    weights: { [key: string]: number };
     history: AccuracySnapshot[];
   };
 }
