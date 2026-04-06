@@ -8,7 +8,7 @@ import { getAccuracyStats } from "@/lib/signalLearner";
 import { evaluate100PctSignal, type HighConvictionEntry } from "@/components/options/HighConvictionSignals";
 import type { AnalysisResult } from "@/lib/stockData";
 import { NIFTY50_FULL, SPY500_FULL, ETF_ENTRIES } from "@/lib/companyData";
-import { Crosshair, ShieldCheck, TrendingUp, TrendingDown, Minus, Activity, Clock, Loader2, ExternalLink } from "lucide-react";
+import { Crosshair, ShieldCheck, TrendingUp, TrendingDown, Minus, Activity, Clock, Loader2, ExternalLink, DollarSign, Brain, BarChart3 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const TOP_SYMBOLS = [
