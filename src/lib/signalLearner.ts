@@ -3,8 +3,11 @@
  * 
  * Tracks prediction accuracy over time and adjusts indicator weights
  * to improve future buy/sell signals. Uses in-memory storage per session
- * with localStorage persistence.
+ * with localStorage persistence. Supports historical data replay for
+ * bootstrapping the learner with 60 days of past data.
  */
+
+import type { IntradayCandle } from "@/lib/api/optionsData";
 
 export interface PredictionRecord {
   timestamp: number;
