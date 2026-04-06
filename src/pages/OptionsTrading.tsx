@@ -20,7 +20,9 @@ export default function OptionsTrading() {
   const [intradayData, setIntradayData] = useState<IntradayData | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [analyzingMacro, setAnalyzingMacro] = useState(false);
+  const [historicalStatus, setHistoricalStatus] = useState<string | null>(null);
   const analysisTriggerRef = useRef<string | null>(null);
+  const historicalRef = useRef<string | null>(null);
 
   const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
   const company = allCompanies.find((c) => c.symbol === symbol);
