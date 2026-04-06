@@ -4,7 +4,6 @@ import { Header } from "@/components/dashboard/Header";
 import { SymbolSearch } from "@/components/options/SymbolSearch";
 import { LivePredictions } from "@/components/options/LivePredictions";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
-import { RealTimeChart } from "@/components/charts/RealTimeChart";
 import { fetchIntradayData, type IntradayData } from "@/lib/api/optionsData";
 import { getCachedAnalysis } from "@/lib/api/stockAnalysis";
 import type { AnalysisResult } from "@/lib/stockData";
