@@ -65,8 +65,15 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
   // Load persisted trades on mount
   const [trades, setTrades] = useState<PersistedTrade[]>(() => loadTrades(symbol));
   const [learningFeedback, setLearningFeedback] = useState<{ wins: number; losses: number }>({ wins: 0, losses: 0 });
+  const [tick, setTick] = useState(0);
   const lastTradeTimeRef = useRef<number>(0);
   const processedConvictionRef = useRef<Set<number>>(new Set());
+
+  // Tick every second so hold timers update smoothly
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
 
   // Initialize processed conviction IDs from loaded trades
   useEffect(() => {
