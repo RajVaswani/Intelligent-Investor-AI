@@ -95,6 +95,24 @@ export async function fetchOptionsChain(symbol: string): Promise<OptionsChainDat
   return data.data;
 }
 
+export interface HistoricalData {
+  symbol: string;
+  currency: string;
+  regularMarketPrice: number;
+  candles: IntradayCandle[];
+  totalCandles: number;
+  ranges: { '2m_7d': number; '5m_60d': number };
+}
+
+export async function fetchHistoricalData(symbol: string): Promise<HistoricalData | null> {
+  const yahooSymbol = toYahooSymbol(symbol);
+  const { data, error } = await supabase.functions.invoke("options-data", {
+    body: { symbol: yahooSymbol, type: "historical" },
+  });
+  if (error || !data?.success) return null;
+  return data.data;
+}
+
 export async function fetchIntradayData(symbol: string): Promise<IntradayData | null> {
   const yahooSymbol = toYahooSymbol(symbol);
   const { data, error } = await supabase.functions.invoke("options-data", {

@@ -3,8 +3,11 @@
  * 
  * Tracks prediction accuracy over time and adjusts indicator weights
  * to improve future buy/sell signals. Uses in-memory storage per session
- * with localStorage persistence.
+ * with localStorage persistence. Supports historical data replay for
+ * bootstrapping the learner with 60 days of past data.
  */
+
+import type { IntradayCandle } from "@/lib/api/optionsData";
 
 export interface PredictionRecord {
   timestamp: number;
@@ -289,4 +292,126 @@ export function getAccuracyStats(symbol: string): {
     weights: state.weights,
     history: state.accuracyHistory || [],
   };
+}
+
+/**
+ * Replay historical candles through the learning engine.
+ * Simulates predictions at each candle and verifies against future candles.
+ * This bootstraps the learner with 60 days of data for better accuracy.
+ */
+export function replayHistoricalData(
+  symbol: string,
+  candles: IntradayCandle[],
+): { predictionsGenerated: number; verified: number } {
+  if (!candles || candles.length < 50) return { predictionsGenerated: 0, verified: 0 };
+
+  const state = loadState(symbol);
+  
+  // Check if we already have enough historical data loaded
+  const HISTORY_KEY = `${STORAGE_KEY}_${symbol}_hist`;
+  try {
+    const existing = localStorage.getItem(HISTORY_KEY);
+    if (existing) {
+      const parsed = JSON.parse(existing);
+      // If we replayed within last hour with similar candle count, skip
+      if (parsed.count >= candles.length * 0.9 && Date.now() - parsed.ts < 3600000) {
+        return { predictionsGenerated: 0, verified: 0 };
+      }
+    }
+  } catch { /* ignore */ }
+
+  const timeframes = [60, 300, 600, 1800, 3600]; // 1m, 5m, 10m, 30m, 1h
+  let generated = 0;
+  let verified = 0;
+
+  // Walk through candles, simulating predictions
+  // Step by ~20 candles to avoid excessive data
+  const step = Math.max(1, Math.floor(candles.length / 500));
+  
+  for (let i = 50; i < candles.length - 10; i += step) {
+    const windowCandles = candles.slice(Math.max(0, i - 50), i + 1);
+    const closes = windowCandles.map(c => c.close);
+    const currentPrice = closes[closes.length - 1];
+    const currentTime = windowCandles[windowCandles.length - 1].time;
+
+    // Simple momentum-based prediction (mirrors signal engine logic)
+    const mom5 = closes.length > 5 
+      ? ((currentPrice - closes[closes.length - 6]) / closes[closes.length - 6]) * 100 : 0;
+    const velocityPerSec = (mom5 / 100) * currentPrice / (5 * 60); // approximate
+
+    for (const tf of timeframes) {
+      const predictedPrice = currentPrice + velocityPerSec * tf;
+      const predictedDirection: "up" | "down" | "flat" =
+        predictedPrice > currentPrice * 1.0001 ? "up" :
+        predictedPrice < currentPrice * 0.9999 ? "down" : "flat";
+
+      // Find the actual price at the target time
+      const targetTime = currentTime + tf * 1000;
+      const futureCandle = candles.find(c => c.time >= targetTime);
+      
+      if (futureCandle) {
+        const actualPrice = futureCandle.close;
+        const actualDirection: "up" | "down" | "flat" =
+          actualPrice > currentPrice * 1.0001 ? "up" :
+          actualPrice < currentPrice * 0.9999 ? "down" : "flat";
+
+        const wasCorrect = predictedDirection === actualDirection ||
+          (predictedDirection === "flat" && Math.abs(actualPrice - currentPrice) / currentPrice < 0.002);
+
+        state.predictions.push({
+          timestamp: currentTime,
+          symbol,
+          timeframeSeconds: tf,
+          predictedPrice,
+          actualPriceAtPrediction: currentPrice,
+          predictedDirection,
+          actualPrice,
+          wasCorrect,
+          error: Math.abs(actualPrice - predictedPrice) / currentPrice * 100,
+        });
+
+        state.totalPredictions++;
+        if (wasCorrect) state.correctPredictions++;
+
+        if (!state.accuracyByTimeframe[tf]) {
+          state.accuracyByTimeframe[tf] = { total: 0, correct: 0 };
+        }
+        state.accuracyByTimeframe[tf].total++;
+        if (wasCorrect) state.accuracyByTimeframe[tf].correct++;
+
+        verified++;
+      }
+
+      generated++;
+    }
+  }
+
+  // Adjust weights based on all this new data
+  if (verified > 10) {
+    adjustWeights(state);
+
+    // Record a summary accuracy snapshot
+    const overallAcc = state.totalPredictions > 0
+      ? (state.correctPredictions / state.totalPredictions) * 100 : 0;
+    const tfSnap: Record<number, number> = {};
+    for (const [tf, d] of Object.entries(state.accuracyByTimeframe)) {
+      tfSnap[Number(tf)] = d.total > 0 ? (d.correct / d.total) * 100 : 0;
+    }
+    state.accuracyHistory.push({
+      timestamp: Date.now(),
+      overall: overallAcc,
+      byTimeframe: tfSnap,
+      totalPredictions: state.totalPredictions,
+    });
+  }
+
+  state.lastUpdated = Date.now();
+  saveState(symbol, state);
+
+  // Mark as replayed
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ ts: Date.now(), count: candles.length }));
+  } catch { /* ignore */ }
+
+  return { predictionsGenerated: generated, verified };
 }

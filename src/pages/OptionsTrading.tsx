@@ -4,8 +4,9 @@ import { Header } from "@/components/dashboard/Header";
 import { SymbolSearch } from "@/components/options/SymbolSearch";
 import { LivePredictions } from "@/components/options/LivePredictions";
 import { TradingViewChart } from "@/components/charts/TradingViewChart";
-import { fetchIntradayData, type IntradayData } from "@/lib/api/optionsData";
+import { fetchIntradayData, fetchHistoricalData, type IntradayData } from "@/lib/api/optionsData";
 import { getCachedAnalysis, analyzeCompany } from "@/lib/api/stockAnalysis";
+import { replayHistoricalData } from "@/lib/signalLearner";
 import type { AnalysisResult } from "@/lib/stockData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Activity } from "lucide-react";
@@ -19,7 +20,9 @@ export default function OptionsTrading() {
   const [intradayData, setIntradayData] = useState<IntradayData | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [analyzingMacro, setAnalyzingMacro] = useState(false);
+  const [historicalStatus, setHistoricalStatus] = useState<string | null>(null);
   const analysisTriggerRef = useRef<string | null>(null);
+  const historicalRef = useRef<string | null>(null);
 
   const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
   const company = allCompanies.find((c) => c.symbol === symbol);
@@ -69,6 +72,27 @@ export default function OptionsTrading() {
 
   useEffect(() => { loadData(symbol); }, [symbol, loadData]);
 
+  // Fetch 60-day historical data and replay through learning engine
+  useEffect(() => {
+    if (historicalRef.current === symbol) return;
+    historicalRef.current = symbol;
+    setHistoricalStatus("Loading 60-day historical data…");
+    fetchHistoricalData(symbol).then((hist) => {
+      if (hist && hist.candles.length > 0) {
+        setHistoricalStatus(`Replaying ${hist.totalCandles} candles through learning engine…`);
+        const result = replayHistoricalData(symbol, hist.candles);
+        if (result.verified > 0) {
+          setHistoricalStatus(`Learned from ${result.verified} historical predictions`);
+          setTimeout(() => setHistoricalStatus(null), 3000);
+        } else {
+          setHistoricalStatus(null); // already replayed
+        }
+      } else {
+        setHistoricalStatus(null);
+      }
+    }).catch(() => setHistoricalStatus(null));
+  }, [symbol]);
+
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -100,6 +124,13 @@ export default function OptionsTrading() {
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading micro & macro analysis for {symbol}…
+          </div>
+        )}
+
+        {historicalStatus && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-chart-4/20 bg-chart-4/5 px-4 py-2 text-sm text-chart-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {historicalStatus}
           </div>
         )}
 
