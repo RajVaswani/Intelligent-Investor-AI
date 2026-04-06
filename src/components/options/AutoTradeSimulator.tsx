@@ -348,22 +348,42 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       </div>
 
       {/* Learning feedback bar */}
-      {(learningFeedback.wins + learningFeedback.losses > 0) && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-2 flex items-center gap-2">
-          <Brain className="h-4 w-4 text-primary" />
-          <div className="flex-1">
-            <div className="text-[9px] uppercase text-muted-foreground mb-0.5">Recursive Learning Feedback</div>
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="text-chart-2 font-mono font-bold">{learningFeedback.wins} wins → weights reinforced</span>
-              <span className="text-destructive font-mono font-bold">{learningFeedback.losses} losses → weights adjusted</span>
+      {(learningFeedback.wins + learningFeedback.losses > 0) && (() => {
+        const w = getLearnedWeights(symbol);
+        return (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-2 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary" />
+              <div className="flex-1">
+                <div className="text-[9px] uppercase text-muted-foreground mb-0.5">Recursive Learning Engine — Live</div>
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span className="text-chart-2 font-mono font-bold">{learningFeedback.wins} wins → reinforced</span>
+                  <span className="text-destructive font-mono font-bold">{learningFeedback.losses} losses → adjusted</span>
+                </div>
+              </div>
+              <div className="text-[9px] text-muted-foreground">
+                <Clock className="h-3 w-3 inline mr-0.5" />
+                1–10m hold
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { label: "RSI", val: w.rsi },
+                { label: "EMA", val: w.ema },
+                { label: "VWAP", val: w.vwap },
+                { label: "Mom", val: w.momentum },
+                { label: "Vol", val: w.volume },
+                { label: "Fund", val: w.fundamental },
+              ].map(ind => (
+                <div key={ind.label} className="flex items-center gap-0.5 rounded bg-muted/50 px-1.5 py-0.5">
+                  <span className="text-[8px] text-muted-foreground">{ind.label}</span>
+                  <span className="text-[9px] font-mono font-bold text-primary">{(ind.val * 100).toFixed(0)}%</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="text-[9px] text-muted-foreground">
-            <Clock className="h-3 w-3 inline mr-0.5" />
-            1–10m hold
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Capital bar */}
       <div className="rounded-lg border border-border bg-muted/20 p-2">
