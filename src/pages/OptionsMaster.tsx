@@ -311,8 +311,8 @@ export default function OptionsMaster() {
                 {allSignals.length === 0 ? (
                   <div className="py-16 text-center">
                     <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground/20" />
-                    <p className="text-xs text-muted-foreground">No 100% conviction signals yet.</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">All 13 indicators must align perfectly for a signal to appear here.</p>
+                    <p className="text-xs text-muted-foreground">No 80%+ conviction signals yet.</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">At least 11 of 13 indicators must align for a signal to appear here.</p>
                   </div>
                 ) : (
                   allSignals.map((sig, i) => (
