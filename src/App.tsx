@@ -12,6 +12,7 @@ import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
 import PortfolioHoldingDetail from "./pages/PortfolioHoldingDetail";
 import OptionsTrading from "./pages/OptionsTrading";
+import OptionsMaster from "./pages/OptionsMaster";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
