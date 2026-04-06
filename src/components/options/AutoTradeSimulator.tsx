@@ -99,7 +99,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
     saveTrades(symbol, trades);
   }, [trades, symbol]);
 
-  // Auto-close trades at MAX hold time
+  // Auto-close: take-profit, stop-loss, and max hold
   useEffect(() => {
     if (currentPrice <= 0) return;
     const now = Date.now();
@@ -108,10 +108,22 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
       let changed = false;
       const updated = prev.map(t => {
         if (t.status !== "OPEN") return t;
+        const pnlPct = t.direction === "LONG"
+          ? ((currentPrice - t.entryPrice) / t.entryPrice) * 100
+          : ((t.entryPrice - currentPrice) / t.entryPrice) * 100;
         const holdTime = now - t.openedAt;
+
+        if (pnlPct >= TAKE_PROFIT_PCT) {
+          changed = true;
+          return closeTrade(t, currentPrice, now, `✅ Take profit +${pnlPct.toFixed(2)}%`);
+        }
+        if (pnlPct <= -STOP_LOSS_PCT) {
+          changed = true;
+          return closeTrade(t, currentPrice, now, `🛑 Stop loss ${pnlPct.toFixed(2)}%`);
+        }
         if (holdTime >= MAX_HOLD_MS) {
           changed = true;
-          return closeTrade(t, currentPrice, now, "Max 10m hold");
+          return closeTrade(t, currentPrice, now, "⏱ Max hold");
         }
         return t;
       });
