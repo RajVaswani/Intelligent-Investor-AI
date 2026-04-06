@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { DollarSign, TrendingUp, TrendingDown, BarChart3, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, BarChart3, ArrowUpRight, ArrowDownRight, Wallet, Zap } from "lucide-react";
 import type { HighConvictionEntry } from "./HighConvictionSignals";
+import type { LiveSignals, Signal } from "@/lib/signalEngine";
 
 interface Trade {
   id: string;
-  entrySignal: HighConvictionEntry;
   entryPrice: number;
   direction: "LONG" | "SHORT";
   exitPrice: number | null;
@@ -13,36 +13,131 @@ interface Trade {
   pnlPct: number | null;
   status: "OPEN" | "CLOSED";
   closedAt: number | null;
+  reason: string;
+  confidence: number;
 }
 
 interface Props {
   history: HighConvictionEntry[];
   currentPrice: number;
   currency: string;
+  signals?: LiveSignals | null;
 }
 
 const STARTING_CAPITAL = 10000;
-const POSITION_SIZE = 1000; // $1000 per trade
+const POSITION_SIZE = 1000;
+const MIN_TRADE_GAP_MS = 5000; // 5s gap between trades
 
-export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
+function getBestPrediction(signals: LiveSignals): { direction: "LONG" | "SHORT" | "HOLD"; confidence: number; reason: string } | null {
+  const preds = signals.predictions;
+  if (!preds || preds.length === 0) return null;
+
+  // Count directional votes weighted by confidence
+  let buyScore = 0, sellScore = 0, holdScore = 0;
+  for (const p of preds) {
+    if (p.signal === "STRONG BUY") buyScore += p.confidence * 1.5;
+    else if (p.signal === "BUY") buyScore += p.confidence;
+    else if (p.signal === "STRONG SELL") sellScore += p.confidence * 1.5;
+    else if (p.signal === "SELL") sellScore += p.confidence;
+    else holdScore += p.confidence;
+  }
+
+  const total = buyScore + sellScore + holdScore;
+  if (total === 0) return null;
+
+  const buyPct = (buyScore / total) * 100;
+  const sellPct = (sellScore / total) * 100;
+
+  // Need at least 55% directional consensus to act
+  if (buyPct > 55) {
+    const avgConf = Math.round(buyScore / preds.filter(p => p.signal === "STRONG BUY" || p.signal === "BUY").length || 50);
+    return { direction: "LONG", confidence: Math.min(avgConf, 99), reason: `${preds.filter(p => p.signal === "STRONG BUY" || p.signal === "BUY").length}/${preds.length} TFs bullish (${buyPct.toFixed(0)}%)` };
+  }
+  if (sellPct > 55) {
+    const avgConf = Math.round(sellScore / preds.filter(p => p.signal === "STRONG SELL" || p.signal === "SELL").length || 50);
+    return { direction: "SHORT", confidence: Math.min(avgConf, 99), reason: `${preds.filter(p => p.signal === "STRONG SELL" || p.signal === "SELL").length}/${preds.length} TFs bearish (${sellPct.toFixed(0)}%)` };
+  }
+
+  return { direction: "HOLD", confidence: 50, reason: "Mixed signals - holding" };
+}
+
+export function AutoTradeSimulator({ history, currentPrice, currency, signals }: Props) {
   const [trades, setTrades] = useState<Trade[]>([]);
-  const processedRef = useRef<Set<number>>(new Set());
+  const lastTradeTimeRef = useRef<number>(0);
+  const processedConvictionRef = useRef<Set<number>>(new Set());
 
-  // Process new signals into trades
+  // Process live signals every tick - trade on best prediction
+  useEffect(() => {
+    if (!signals || currentPrice <= 0) return;
+    const now = Date.now();
+    if (now - lastTradeTimeRef.current < MIN_TRADE_GAP_MS) return;
+
+    const best = getBestPrediction(signals);
+    if (!best || best.direction === "HOLD") return;
+
+    setTrades(prev => {
+      const openTrades = prev.filter(t => t.status === "OPEN");
+      const lastOpen = openTrades[openTrades.length - 1];
+
+      // If already have an open trade in same direction, skip
+      if (lastOpen && lastOpen.direction === best.direction) return prev;
+
+      let updated = [...prev];
+
+      // Close opposite open trades
+      updated = updated.map(t => {
+        if (t.status === "OPEN" && t.direction !== best.direction) {
+          const pnl = t.direction === "LONG"
+            ? currentPrice - t.entryPrice
+            : t.entryPrice - currentPrice;
+          const pnlPct = (pnl / t.entryPrice) * 100;
+          return {
+            ...t,
+            exitPrice: currentPrice,
+            exitTime: new Date(now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+            pnl: pnl * (POSITION_SIZE / t.entryPrice),
+            pnlPct,
+            status: "CLOSED" as const,
+            closedAt: now,
+          };
+        }
+        return t;
+      });
+
+      // Open new trade
+      lastTradeTimeRef.current = now;
+      updated.push({
+        id: `trade-${now}`,
+        entryPrice: currentPrice,
+        direction: best.direction,
+        exitPrice: null,
+        exitTime: null,
+        pnl: null,
+        pnlPct: null,
+        status: "OPEN",
+        closedAt: null,
+        reason: best.reason,
+        confidence: best.confidence,
+      });
+
+      return updated.slice(-200);
+    });
+  }, [signals, currentPrice]);
+
+  // Also process conviction signals (higher priority trades)
   useEffect(() => {
     if (history.length === 0) return;
 
     setTrades(prev => {
       let updated = [...prev];
 
-      // Close opposite trades when new signal fires
       for (const signal of history) {
-        if (processedRef.current.has(signal.timestamp)) continue;
-        processedRef.current.add(signal.timestamp);
+        if (processedConvictionRef.current.has(signal.timestamp)) continue;
+        processedConvictionRef.current.add(signal.timestamp);
 
         const newDirection = signal.signal === "BUY" ? "LONG" : "SHORT";
 
-        // Close any open trades in opposite direction
+        // Close opposite
         updated = updated.map(t => {
           if (t.status === "OPEN" && t.direction !== newDirection) {
             const pnl = t.direction === "LONG"
@@ -62,10 +157,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
           return t;
         });
 
-        // Open new trade
+        lastTradeTimeRef.current = signal.timestamp;
         updated.push({
-          id: `trade-${signal.timestamp}`,
-          entrySignal: signal,
+          id: `conv-${signal.timestamp}`,
           entryPrice: signal.price,
           direction: newDirection,
           exitPrice: null,
@@ -74,10 +168,12 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
           pnlPct: null,
           status: "OPEN",
           closedAt: null,
+          reason: `⚡ Conviction: ${signal.reasons[0] || "All indicators aligned"}`,
+          confidence: signal.confidence,
         });
       }
 
-      return updated.slice(-100);
+      return updated.slice(-200);
     });
   }, [history, currentPrice]);
 
@@ -108,8 +204,8 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center">
         <Wallet className="mx-auto mb-1 h-6 w-6 text-muted-foreground/30" />
-        <p className="text-xs text-muted-foreground">Auto-trade simulator will start when signals fire</p>
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Virtual {currency}{STARTING_CAPITAL.toLocaleString()} capital · {currency}{POSITION_SIZE} per trade</p>
+        <p className="text-xs text-muted-foreground">Auto-trader active — waiting for directional consensus</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Trades on best prediction (55%+ consensus) · No conviction wait · {currency}{STARTING_CAPITAL.toLocaleString()} capital</p>
       </div>
     );
   }
@@ -117,7 +213,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
   return (
     <div className="space-y-3">
       {/* P&L Dashboard */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <div className={`rounded-lg border p-2.5 text-center ${metrics.totalPnl >= 0 ? "border-chart-2/30 bg-chart-2/5" : "border-destructive/30 bg-destructive/5"}`}>
           <div className="text-[9px] uppercase text-muted-foreground">Total P&L</div>
           <div className={`text-lg font-bold font-mono ${metrics.totalPnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
@@ -140,12 +236,20 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
           <div className="text-lg font-bold font-mono text-foreground">{metrics.openTrades.length}</div>
           <div className="text-[9px] text-muted-foreground">{metrics.totalTrades} total</div>
         </div>
+        <div className={`rounded-lg border p-2.5 text-center ${metrics.realizedPnl >= 0 ? "border-chart-2/20 bg-chart-2/5" : "border-destructive/20 bg-destructive/5"}`}>
+          <div className="text-[9px] uppercase text-muted-foreground">Realized</div>
+          <div className={`text-sm font-bold font-mono ${metrics.realizedPnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
+            {metrics.realizedPnl >= 0 ? "+" : ""}{currency}{metrics.realizedPnl.toFixed(2)}
+          </div>
+        </div>
       </div>
 
       {/* Capital bar */}
       <div className="rounded-lg border border-border bg-muted/20 p-2">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[9px] uppercase text-muted-foreground">Capital</span>
+          <span className="text-[9px] uppercase text-muted-foreground flex items-center gap-1">
+            <Zap className="h-3 w-3 text-primary" /> Active Trading Capital
+          </span>
           <span className={`text-xs font-bold font-mono ${metrics.totalPnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
             {currency}{(STARTING_CAPITAL + metrics.totalPnl).toFixed(2)}
           </span>
@@ -157,8 +261,8 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[9px] text-muted-foreground">Realized: {metrics.realizedPnl >= 0 ? "+" : ""}{currency}{metrics.realizedPnl.toFixed(2)}</span>
           <span className="text-[9px] text-muted-foreground">Unrealized: {metrics.unrealizedPnl >= 0 ? "+" : ""}{currency}{metrics.unrealizedPnl.toFixed(2)}</span>
+          <span className="text-[9px] text-muted-foreground">Mode: Best Prediction (55%+ consensus)</span>
         </div>
       </div>
 
@@ -182,7 +286,7 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
                       {t.direction}
                     </span>
                     <span className="text-[10px] font-mono text-foreground">@ {currency}{t.entryPrice.toFixed(2)}</span>
-                    <span className="text-[9px] text-muted-foreground">{t.entrySignal.time}</span>
+                    <span className="text-[9px] text-muted-foreground truncate max-w-[150px]">{t.reason}</span>
                     <span className="ml-auto flex items-center gap-0.5">
                       {livePnl >= 0 ? <ArrowUpRight className="h-3 w-3 text-chart-2" /> : <ArrowDownRight className="h-3 w-3 text-destructive" />}
                       <span className={`text-xs font-bold font-mono ${livePnl >= 0 ? "text-chart-2" : "text-destructive"}`}>
@@ -200,17 +304,19 @@ export function AutoTradeSimulator({ history, currentPrice, currency }: Props) {
       {/* Trade log */}
       <div>
         <div className="text-[10px] uppercase text-muted-foreground font-medium mb-1.5 flex items-center gap-1">
-          <DollarSign className="h-3 w-3" /> Trade Log
+          <DollarSign className="h-3 w-3" /> Trade Log ({trades.length} trades)
         </div>
         <div className="space-y-1 max-h-48 overflow-y-auto">
-          {[...trades].reverse().slice(0, 20).map(t => {
+          {[...trades].reverse().slice(0, 30).map(t => {
             const isClosed = t.status === "CLOSED";
+            const isConviction = t.id.startsWith("conv-");
             return (
               <div key={t.id} className={`rounded-md border p-1.5 flex items-center gap-2 text-[10px] ${
                 isClosed
                   ? (t.pnl || 0) >= 0 ? "border-chart-2/15 bg-chart-2/5" : "border-destructive/15 bg-destructive/5"
                   : "border-primary/15 bg-primary/5"
               }`}>
+                {isConviction && <Zap className="h-3 w-3 text-primary" />}
                 <span className={`font-bold px-1 py-0.5 rounded ${t.direction === "LONG" ? "bg-chart-2/20 text-chart-2" : "bg-destructive/20 text-destructive"}`}>
                   {t.direction}
                 </span>
