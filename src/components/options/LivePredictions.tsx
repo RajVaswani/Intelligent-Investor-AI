@@ -136,7 +136,7 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:justify-between">
         <div>
           <div className="text-sm text-muted-foreground">{symbol}</div>
-          <div className="text-4xl font-bold font-mono text-foreground">${signals.currentPrice.toFixed(2)}</div>
+          <div className="text-4xl font-bold font-mono text-foreground">{curr}{signals.currentPrice.toFixed(2)}</div>
           {analysisInput && (
             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
               <span className={analysisInput.sentiment === "bullish" ? "text-chart-2" : analysisInput.sentiment === "bearish" ? "text-destructive" : ""}>
