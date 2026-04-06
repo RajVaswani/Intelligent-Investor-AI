@@ -78,10 +78,11 @@ export interface AIStrategyResult {
   riskWarning: string;
 }
 
-// Nifty 50 symbols need .NS suffix for Yahoo Finance
-import { NIFTY50_FULL } from "@/lib/companyData";
+// Nifty 50 symbols need .NS suffix for Yahoo Finance; ETFs have special mappings
+import { NIFTY50_FULL, ETF_YAHOO_MAP } from "@/lib/companyData";
 const NIFTY_SYMBOLS = new Set(NIFTY50_FULL.map((c) => c.symbol));
 function toYahooSymbol(sym: string): string {
+  if (ETF_YAHOO_MAP[sym]) return ETF_YAHOO_MAP[sym];
   return NIFTY_SYMBOLS.has(sym) ? `${sym}.NS` : sym;
 }
 

@@ -317,6 +317,20 @@ export const SPY500_FULL: Company[] = [
   { symbol: "CBOE", name: "Cboe Global Markets", sector: "Financials", website: "https://www.cboe.com", etf: "spy", tradingViewSymbol: "CBOE" },
 ];
 
+// ETF / Index entries for options trading
+export const ETF_ENTRIES: Company[] = [
+  { symbol: "SPY", name: "SPDR S&P 500 ETF", sector: "ETF", website: "https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-sp-500-etf-trust-spy", etf: "spy", tradingViewSymbol: "AMEX:SPY" },
+  { symbol: "QQQ", name: "Invesco QQQ Trust", sector: "ETF", website: "https://www.invesco.com/qqq-etf", etf: "spy", tradingViewSymbol: "NASDAQ:QQQ" },
+  { symbol: "NIFTY50", name: "Nifty 50 Index", sector: "Index", website: "https://www.nseindia.com", etf: "nifty50", tradingViewSymbol: "NSE:NIFTY" },
+];
+
+// Map special symbols to Yahoo Finance tickers
+export const ETF_YAHOO_MAP: Record<string, string> = {
+  "SPY": "SPY",
+  "QQQ": "QQQ",
+  "NIFTY50": "^NSEI",
+};
+
 export function getFullCompanies(etf: ETFType): Company[] {
   return etf === "nifty50" ? NIFTY50_FULL : SPY500_FULL;
 }
