@@ -80,7 +80,7 @@ export default function OptionsTrading() {
         ) : (
           <div className="space-y-4">
             {isNifty50 ? (
-              <RealTimeChart symbol={symbol} yahooSymbol={yahooSymbol} height={2000} refreshInterval={1000} />
+              <RealTimeChart symbol={symbol} yahooSymbol={yahooSymbol} height={1000} refreshInterval={1000} />
             ) : (
               <TradingViewChart symbol={tvSymbol} height={2000} interval="1" />
             )}
