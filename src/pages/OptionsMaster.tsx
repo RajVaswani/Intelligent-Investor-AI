@@ -289,7 +289,7 @@ export default function OptionsMaster() {
             <DollarSign className="h-5 w-5 text-primary" />
             <h3 className="text-sm font-bold text-foreground">Portfolio P&L · All Auto-Traders</h3>
             <Brain className="h-4 w-4 text-primary/60" />
-            <span className="text-[10px] text-muted-foreground">Self-improving · $1K/trade · 1–10m hold</span>
+            <span className="text-[10px] text-muted-foreground">Self-improving · $1K/trade · TP 0.15% · SL 0.20%</span>
             <span className="ml-auto relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
