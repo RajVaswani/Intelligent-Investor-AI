@@ -358,6 +358,26 @@ export function HighConvictionSignals({ signals, symbol, currency, accuracyStats
           </div>
         )}
 
+        {/* Auto-Trade Simulator with P&L */}
+        <div className="mt-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Crosshair className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] uppercase text-muted-foreground font-medium">
+              Auto-Trade Simulator · Live P&L
+            </span>
+            <span className="relative flex h-1.5 w-1.5 ml-auto">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-2 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-chart-2" />
+            </span>
+            <span className="text-[9px] text-chart-2">LIVE</span>
+          </div>
+          <AutoTradeSimulator
+            history={history}
+            currentPrice={signals?.currentPrice ?? 0}
+            currency={currency}
+          />
+        </div>
+
         {/* Signal history */}
         {history.length > 1 && (
           <div className="mt-3">
