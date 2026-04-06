@@ -263,6 +263,7 @@ export function getAccuracyStats(symbol: string): {
   correct: number;
   byTimeframe: Record<number, { accuracy: number; total: number }>;
   weights: IndicatorAccuracy;
+  history: AccuracySnapshot[];
 } {
   const state = loadState(symbol);
   const overall = state.totalPredictions > 0
@@ -282,5 +283,6 @@ export function getAccuracyStats(symbol: string): {
     correct: state.correctPredictions,
     byTimeframe,
     weights: state.weights,
+    history: state.accuracyHistory || [],
   };
 }
