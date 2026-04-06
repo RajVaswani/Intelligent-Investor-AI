@@ -76,6 +76,7 @@ const tfLabelMap: Record<number, string> = {
 export function LivePredictions({ data, symbol, analysis, isIndian = false }: Props) {
   const curr = isIndian ? "₹" : "$";
   const [tick, setTick] = useState(0);
+  const [drilldownTF, setDrilldownTF] = useState<number | null>(null);
 
   useEffect(() => {
     const i = setInterval(() => setTick((t) => t + 1), 1000);
