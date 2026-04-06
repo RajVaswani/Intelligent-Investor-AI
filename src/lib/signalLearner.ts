@@ -304,6 +304,115 @@ function adjustWeights(state: LearningState): void {
 }
 
 /**
+ * Record a trade outcome from the auto-trade simulator.
+ * Feeds wins/losses back into the learning engine to adjust weights
+ * and improve future signal generation.
+ */
+export function recordTradeOutcome(
+  symbol: string,
+  direction: "LONG" | "SHORT",
+  entryPrice: number,
+  exitPrice: number,
+  holdTimeSeconds: number,
+  wasProfit: boolean,
+): void {
+  const state = loadState(symbol);
+  const lr = 0.03; // slightly higher learning rate for trade feedback
+
+  // Map hold time to nearest timeframe bucket
+  const tfBuckets = [30, 60, 180, 300, 600];
+  const nearestTF = tfBuckets.reduce((best, tf) =>
+    Math.abs(tf - holdTimeSeconds) < Math.abs(best - holdTimeSeconds) ? tf : best
+  );
+
+  // Record as a synthetic prediction
+  const predictedDirection: "up" | "down" | "flat" = direction === "LONG" ? "up" : "down";
+  const actualDirection: "up" | "down" | "flat" =
+    exitPrice > entryPrice * 1.0001 ? "up" :
+    exitPrice < entryPrice * 0.9999 ? "down" : "flat";
+
+  // For a trade, "correct" means the direction we chose was profitable
+  const wasCorrect = wasProfit;
+
+  state.predictions.push({
+    timestamp: Date.now(),
+    symbol,
+    timeframeSeconds: nearestTF,
+    predictedPrice: direction === "LONG" ? entryPrice * 1.001 : entryPrice * 0.999,
+    actualPriceAtPrediction: entryPrice,
+    predictedDirection,
+    actualPrice: exitPrice,
+    wasCorrect,
+    error: Math.abs(exitPrice - entryPrice) / entryPrice * 100,
+  });
+
+  state.totalPredictions++;
+  if (wasCorrect) state.correctPredictions++;
+
+  if (!state.accuracyByTimeframe[nearestTF]) {
+    state.accuracyByTimeframe[nearestTF] = { total: 0, correct: 0 };
+  }
+  state.accuracyByTimeframe[nearestTF].total++;
+  if (wasCorrect) state.accuracyByTimeframe[nearestTF].correct++;
+
+  // Profit-focused weight adjustment
+  const pnlPct = ((exitPrice - entryPrice) / entryPrice) * 100 * (direction === "LONG" ? 1 : -1);
+  const weights = state.weights;
+
+  if (wasProfit) {
+    // Reinforce: boost momentum and volume on winning trades
+    weights.momentum = Math.min(0.40, weights.momentum + lr * 0.5);
+    if (holdTimeSeconds <= 120) {
+      // Short hold wins → RSI/EMA are working well
+      weights.rsi = Math.min(0.35, weights.rsi + lr * 0.3);
+      weights.ema = Math.min(0.35, weights.ema + lr * 0.3);
+    }
+  } else {
+    // Losing trade → penalize. Shift toward what might help
+    if (holdTimeSeconds <= 120) {
+      // Short hold losses → reduce momentum, add fundamental caution
+      weights.momentum = Math.max(0.10, weights.momentum - lr);
+      weights.fundamental = Math.min(0.60, weights.fundamental + lr * 0.5);
+    } else {
+      // Longer hold losses → reduce EMA trend following
+      weights.ema = Math.max(0.10, weights.ema - lr * 0.5);
+      weights.vwap = Math.min(0.30, weights.vwap + lr * 0.5);
+    }
+  }
+
+  // Normalize technical weights
+  const techSum = weights.rsi + weights.ema + weights.vwap + weights.momentum + weights.volume;
+  if (techSum > 0) {
+    weights.rsi /= techSum;
+    weights.ema /= techSum;
+    weights.vwap /= techSum;
+    weights.momentum /= techSum;
+    weights.volume /= techSum;
+  }
+  weights.fundamental = Math.max(0.20, Math.min(0.60, weights.fundamental));
+
+  // Record accuracy snapshot
+  const overallAcc = state.totalPredictions > 0
+    ? (state.correctPredictions / state.totalPredictions) * 100 : 0;
+  const tfSnap: Record<number, number> = {};
+  for (const [tf, d] of Object.entries(state.accuracyByTimeframe)) {
+    tfSnap[Number(tf)] = d.total > 0 ? (d.correct / d.total) * 100 : 0;
+  }
+  state.accuracyHistory.push({
+    timestamp: Date.now(),
+    overall: overallAcc,
+    byTimeframe: tfSnap,
+    totalPredictions: state.totalPredictions,
+  });
+  if (state.accuracyHistory.length > 200) {
+    state.accuracyHistory = state.accuracyHistory.slice(-200);
+  }
+
+  state.lastUpdated = Date.now();
+  saveState(symbol, state);
+}
+
+/**
  * Get learned weights for signal computation
  */
 export function getLearnedWeights(symbol: string): IndicatorAccuracy {
