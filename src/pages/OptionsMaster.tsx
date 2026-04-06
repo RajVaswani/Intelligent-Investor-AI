@@ -18,9 +18,11 @@ const TOP_SYMBOLS = [
 const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
 
 const POSITION_SIZE = 1000;
-const MIN_HOLD_MS = 60_000;
-const MAX_HOLD_MS = 600_000;
-const MIN_TRADE_GAP_MS = 5000;
+const MIN_HOLD_MS = 0;
+const MAX_HOLD_MS = 300_000;
+const MIN_TRADE_GAP_MS = 1000;
+const TAKE_PROFIT_PCT = 0.15;
+const STOP_LOSS_PCT = 0.20;
 
 interface SymbolState {
   symbol: string;

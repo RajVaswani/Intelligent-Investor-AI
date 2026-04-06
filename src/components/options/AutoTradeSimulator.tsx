@@ -219,9 +219,9 @@ export function AutoTradeSimulator({ history, currentPrice, currency, signals, s
         // Don't open if already holding same direction
         if (openTrades.some(t => t.direction === newDirection)) continue;
 
-        // Close opposite trades only if past MIN_HOLD
+        // Close opposite trades immediately
         updated = updated.map(t => {
-          if (t.status === "OPEN" && t.direction !== newDirection && (now - t.openedAt) >= MIN_HOLD_MS) {
+          if (t.status === "OPEN" && t.direction !== newDirection) {
             return closeTrade(t, currentPrice, now, "⚡ Conviction override");
           }
           return t;
