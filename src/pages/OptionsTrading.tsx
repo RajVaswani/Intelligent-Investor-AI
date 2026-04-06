@@ -48,7 +48,7 @@ export default function OptionsTrading() {
     return () => clearInterval(interval);
   }, [symbol]);
 
-  const allCompanies = [...NIFTY50_FULL, ...SPY500_FULL];
+  const allCompanies = [...ETF_ENTRIES, ...NIFTY50_FULL, ...SPY500_FULL];
   const company = allCompanies.find((c) => c.symbol === symbol);
   const isNifty50 = company?.etf === "nifty50";
   const yahooSymbol = symbol.includes(".") ? symbol : isNifty50 ? `${symbol}.NS` : symbol;
