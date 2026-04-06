@@ -173,7 +173,7 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-[10px] uppercase text-muted-foreground">VWAP</div>
-          <div className="text-lg font-bold font-mono text-foreground">${signals.vwap.toFixed(2)}</div>
+          <div className="text-lg font-bold font-mono text-foreground">{curr}{signals.vwap.toFixed(2)}</div>
           <div className={`text-[10px] ${signals.priceVsVwap === "above" ? "text-chart-2" : signals.priceVsVwap === "below" ? "text-destructive" : "text-muted-foreground"}`}>
             Price {signals.priceVsVwap}
           </div>
