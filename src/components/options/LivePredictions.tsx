@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import type { IntradayData } from "@/lib/api/optionsData";
 import type { AnalysisResult } from "@/lib/stockData";
 import { computeLiveSignals, type LiveSignals, type Signal, type AnalysisInput } from "@/lib/signalEngine";
-import { getAccuracyStats } from "@/lib/signalLearner";
-import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers } from "lucide-react";
+import { getAccuracyStats, type AccuracySnapshot } from "@/lib/signalLearner";
+import { ArrowUp, ArrowDown, Minus, Zap, Activity, TrendingUp, TrendingDown, BarChart3, Globe, AlertTriangle, Newspaper, Shield, Brain, Target, Gauge, Layers, LineChart } from "lucide-react";
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 
 interface Props {
   data: IntradayData | null;
@@ -305,6 +306,51 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
                       </div>
                     );
                   })}
+              </div>
+            </div>
+          )}
+
+          {/* Accuracy Improvement Chart */}
+          {accuracyStats.history.length >= 2 && (
+            <div className="mt-3">
+              <div className="mb-2 text-[10px] uppercase text-muted-foreground font-medium flex items-center gap-1">
+                <LineChart className="h-3 w-3" /> Prediction Accuracy Over Time
+              </div>
+              <div className="h-48 w-full rounded-lg border border-border bg-muted/20 p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsLineChart
+                    data={accuracyStats.history.map((h, i) => ({
+                      idx: i + 1,
+                      time: new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      overall: Number(h.overall.toFixed(1)),
+                      predictions: h.totalPredictions,
+                      ...Object.fromEntries(
+                        Object.entries(h.byTimeframe).map(([tf, acc]) => [
+                          tfLabelMap[Number(tf)] || `${tf}s`,
+                          Number(acc.toFixed(1)),
+                        ])
+                      ),
+                    }))}
+                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+                    <XAxis dataKey="time" tick={{ fontSize: 9 }} className="fill-muted-foreground" interval="preserveStartEnd" />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} className="fill-muted-foreground" unit="%" width={35} />
+                    <Tooltip
+                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '11px' }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <ReferenceLine y={50} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" strokeOpacity={0.5} />
+                    <Line type="monotone" dataKey="overall" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Overall" />
+                    {Object.values(tfLabelMap).slice(0, 4).map((label, i) => {
+                      const colors = ['hsl(var(--chart-2))', 'hsl(var(--chart-4))', 'hsl(var(--chart-1))', 'hsl(var(--chart-3))'];
+                      return (
+                        <Line key={label} type="monotone" dataKey={label} stroke={colors[i]} strokeWidth={1} dot={false} name={label} strokeOpacity={0.6} />
+                      );
+                    })}
+                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
               </div>
             </div>
           )}

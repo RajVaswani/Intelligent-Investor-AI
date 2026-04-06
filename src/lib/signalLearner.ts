@@ -28,12 +28,20 @@ export interface IndicatorAccuracy {
   fundamental: number;
 }
 
+export interface AccuracySnapshot {
+  timestamp: number;
+  overall: number;
+  byTimeframe: Record<number, number>;
+  totalPredictions: number;
+}
+
 export interface LearningState {
   predictions: PredictionRecord[];
   weights: IndicatorAccuracy;
   totalPredictions: number;
   correctPredictions: number;
   accuracyByTimeframe: Record<number, { total: number; correct: number }>;
+  accuracyHistory: AccuracySnapshot[];
   lastUpdated: number;
 }
 
@@ -59,6 +67,7 @@ function loadState(symbol: string): LearningState {
     totalPredictions: 0,
     correctPredictions: 0,
     accuracyByTimeframe: {},
+    accuracyHistory: [],
     lastUpdated: Date.now(),
   };
 }
@@ -149,6 +158,24 @@ export function verifyPredictions(symbol: string, currentPrice: number): void {
   if (changed) {
     state.lastUpdated = now;
     adjustWeights(state);
+
+    // Record accuracy snapshot (max 200 points)
+    const overallAcc = state.totalPredictions > 0
+      ? (state.correctPredictions / state.totalPredictions) * 100 : 0;
+    const tfSnap: Record<number, number> = {};
+    for (const [tf, d] of Object.entries(state.accuracyByTimeframe)) {
+      tfSnap[Number(tf)] = d.total > 0 ? (d.correct / d.total) * 100 : 0;
+    }
+    state.accuracyHistory.push({
+      timestamp: now,
+      overall: overallAcc,
+      byTimeframe: tfSnap,
+      totalPredictions: state.totalPredictions,
+    });
+    if (state.accuracyHistory.length > 200) {
+      state.accuracyHistory = state.accuracyHistory.slice(-200);
+    }
+
     saveState(symbol, state);
   }
 }
@@ -236,6 +263,7 @@ export function getAccuracyStats(symbol: string): {
   correct: number;
   byTimeframe: Record<number, { accuracy: number; total: number }>;
   weights: IndicatorAccuracy;
+  history: AccuracySnapshot[];
 } {
   const state = loadState(symbol);
   const overall = state.totalPredictions > 0
@@ -255,5 +283,6 @@ export function getAccuracyStats(symbol: string): {
     correct: state.correctPredictions,
     byTimeframe,
     weights: state.weights,
+    history: state.accuracyHistory || [],
   };
 }
