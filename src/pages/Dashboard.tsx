@@ -441,8 +441,9 @@ export default function Dashboard() {
             <div className="space-y-3">
               {holdings.map((holding) => {
                 const analysis = analyses[holding.symbol];
-                const value = holding.quantity * holding.avg_price;
-                const weight = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : "0";
+                const liveP = livePrices[holding.symbol];
+                const value = holding.quantity * (liveP || holding.avg_price);
+                const weight = totalMarketValue > 0 ? ((value / totalMarketValue) * 100).toFixed(1) : "0";
 
                 return (
                   <div key={holding.id} onClick={() => navigate(`/portfolio/${holding.symbol}`)} className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md">
