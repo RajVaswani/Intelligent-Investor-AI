@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Target, TrendingUp, AlertTriangle, DollarSign, Percent, ChevronDown, ChevronUp } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Legend, ReferenceLine } from "recharts";
 import type { AnalysisResult } from "@/lib/stockData";
