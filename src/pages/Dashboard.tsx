@@ -287,7 +287,7 @@ export default function Dashboard() {
   }, 0);
   const totalPnL = totalMarketValue - totalCostBasis;
   const totalPnLPct = totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
-  const hasLivePrices = Object.keys(livePrices).length > 0;
+  
   const analyzedHoldings = holdings.filter((h) => analyses[h.symbol]);
   const avgScore = analyzedHoldings.length > 0
     ? Math.round(analyzedHoldings.reduce((sum, h) => sum + (analyses[h.symbol]?.overallScore || 0), 0) / analyzedHoldings.length)
