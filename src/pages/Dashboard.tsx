@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,8 @@ export default function Dashboard() {
   const [ibkrLoading, setIbkrLoading] = useState(false);
   const [ibkrSyncing, setIbkrSyncing] = useState(false);
   const [newHolding, setNewHolding] = useState({ symbol: "", company_name: "", quantity: "", avg_price: "", sector: "", exchange: "" });
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const priceTickRef = useRef(0);
 
   // Load holdings
   const loadHoldings = useCallback(async () => {
@@ -123,6 +125,35 @@ export default function Dashboard() {
     }, 30000);
     return () => clearInterval(interval);
   }, [holdings, loadAnalyses]);
+
+  // Live price fetching every 1 second
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    let cancelled = false;
+    const fetchPrices = async () => {
+      const prices: Record<string, number> = {};
+      await Promise.all(
+        holdings.map(async (h) => {
+          try {
+            const yahooSymbol = h.exchange === "NSE" ? `${h.symbol}.NS` : h.symbol;
+            const { data, error } = await supabase.functions.invoke("stock-data", {
+              body: { symbol: yahooSymbol, range: "1d", interval: "1d" },
+            });
+            if (!error && data?.success && data.data?.regularMarketPrice) {
+              prices[h.symbol] = data.data.regularMarketPrice;
+            }
+          } catch { /* skip */ }
+        })
+      );
+      if (!cancelled) {
+        setLivePrices(prices);
+        priceTickRef.current += 1;
+      }
+    };
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 1000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [holdings]);
 
   const addHolding = async () => {
     if (!user || !newHolding.symbol || !newHolding.company_name) return;
@@ -248,8 +279,15 @@ export default function Dashboard() {
     }
   };
 
-  // Portfolio stats
-  const totalValue = holdings.reduce((sum, h) => sum + h.quantity * h.avg_price, 0);
+  // Portfolio stats — use live prices when available
+  const totalCostBasis = holdings.reduce((sum, h) => sum + h.quantity * h.avg_price, 0);
+  const totalMarketValue = holdings.reduce((sum, h) => {
+    const price = livePrices[h.symbol] || h.avg_price;
+    return sum + h.quantity * price;
+  }, 0);
+  const totalPnL = totalMarketValue - totalCostBasis;
+  const totalPnLPct = totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
+  
   const analyzedHoldings = holdings.filter((h) => analyses[h.symbol]);
   const avgScore = analyzedHoldings.length > 0
     ? Math.round(analyzedHoldings.reduce((sum, h) => sum + (analyses[h.symbol]?.overallScore || 0), 0) / analyzedHoldings.length)
@@ -332,11 +370,16 @@ export default function Dashboard() {
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground">Portfolio Value</p>
-              <p className="text-2xl font-bold text-foreground">${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-2xl font-bold text-foreground">${totalMarketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Avg AI Score</p>
-              <p className="text-2xl font-bold text-foreground">{avgScore || "—"}<span className="text-sm text-muted-foreground">/100</span></p>
+            <div className={`rounded-xl border p-4 ${totalPnL >= 0 ? "border-gain/20 bg-gain/5" : "border-loss/20 bg-loss/5"}`}>
+              <p className="text-xs text-muted-foreground">Unrealized P&L</p>
+              <p className={`text-2xl font-bold ${totalPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                {totalPnL >= 0 ? "+" : ""}${Math.abs(totalPnL).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+              <p className={`text-xs ${totalPnLPct >= 0 ? "text-gain" : "text-loss"}`}>
+                {totalPnLPct >= 0 ? "+" : ""}{totalPnLPct.toFixed(1)}%
+              </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground">Sentiment</p>
@@ -364,12 +407,12 @@ export default function Dashboard() {
 
           {/* P&L + Goal Planner */}
           {holdings.length > 0 && (
-            <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalValue} />
+            <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalMarketValue} />
           )}
 
           {/* Aladdin-Inspired Risk Analytics */}
           {holdings.length > 0 && (
-            <RiskAnalytics holdings={holdings} analyses={analyses} livePrices={{}} />
+            <RiskAnalytics holdings={holdings} analyses={analyses} livePrices={livePrices} />
           )}
 
           {/* Add Holding Form */}
@@ -398,8 +441,9 @@ export default function Dashboard() {
             <div className="space-y-3">
               {holdings.map((holding) => {
                 const analysis = analyses[holding.symbol];
-                const value = holding.quantity * holding.avg_price;
-                const weight = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : "0";
+                const liveP = livePrices[holding.symbol];
+                const value = holding.quantity * (liveP || holding.avg_price);
+                const weight = totalMarketValue > 0 ? ((value / totalMarketValue) * 100).toFixed(1) : "0";
 
                 return (
                   <div key={holding.id} onClick={() => navigate(`/portfolio/${holding.symbol}`)} className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md">
