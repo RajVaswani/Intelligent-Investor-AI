@@ -36,6 +36,9 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   const [showPlanner, setShowPlanner] = useState(false);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [_pricesLoading, setPricesLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
+  const tickRef = useRef(0);
 
   // Fetch live prices for all holdings every 1 second
   useEffect(() => {
