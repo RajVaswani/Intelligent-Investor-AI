@@ -407,7 +407,7 @@ export default function Dashboard() {
 
           {/* P&L + Goal Planner */}
           {holdings.length > 0 && (
-            <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalValue} />
+            <PortfolioPlanner holdings={holdings} analyses={analyses} totalValue={totalMarketValue} />
           )}
 
           {/* Aladdin-Inspired Risk Analytics */}
