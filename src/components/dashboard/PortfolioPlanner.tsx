@@ -225,6 +225,17 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
 
   return (
     <div className="space-y-4">
+      {/* Live Refresh Indicator */}
+      <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gain opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-gain"></span>
+        </span>
+        <Wifi className="h-3 w-3 text-gain" />
+        <span>Live · {Object.keys(livePrices).length} feeds · Refresh #{refreshCount}</span>
+        {lastRefresh && <span>· {lastRefresh.toLocaleTimeString()}</span>}
+      </div>
+
       {/* P&L Summary Bar */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
