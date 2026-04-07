@@ -64,6 +64,9 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
       if (!cancelled) {
         setLivePrices(prices);
         setPricesLoading(false);
+        setLastRefresh(new Date());
+        tickRef.current += 1;
+        setRefreshCount(tickRef.current);
       }
     };
     setPricesLoading(true);
