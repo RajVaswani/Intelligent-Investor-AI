@@ -279,8 +279,15 @@ export default function Dashboard() {
     }
   };
 
-  // Portfolio stats
-  const totalValue = holdings.reduce((sum, h) => sum + h.quantity * h.avg_price, 0);
+  // Portfolio stats — use live prices when available
+  const totalCostBasis = holdings.reduce((sum, h) => sum + h.quantity * h.avg_price, 0);
+  const totalMarketValue = holdings.reduce((sum, h) => {
+    const price = livePrices[h.symbol] || h.avg_price;
+    return sum + h.quantity * price;
+  }, 0);
+  const totalPnL = totalMarketValue - totalCostBasis;
+  const totalPnLPct = totalCostBasis > 0 ? (totalPnL / totalCostBasis) * 100 : 0;
+  const hasLivePrices = Object.keys(livePrices).length > 0;
   const analyzedHoldings = holdings.filter((h) => analyses[h.symbol]);
   const avgScore = analyzedHoldings.length > 0
     ? Math.round(analyzedHoldings.reduce((sum, h) => sum + (analyses[h.symbol]?.overallScore || 0), 0) / analyzedHoldings.length)
