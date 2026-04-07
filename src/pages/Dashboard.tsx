@@ -47,6 +47,8 @@ export default function Dashboard() {
   const [ibkrLoading, setIbkrLoading] = useState(false);
   const [ibkrSyncing, setIbkrSyncing] = useState(false);
   const [newHolding, setNewHolding] = useState({ symbol: "", company_name: "", quantity: "", avg_price: "", sector: "", exchange: "" });
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const priceTickRef = useRef(0);
 
   // Load holdings
   const loadHoldings = useCallback(async () => {
