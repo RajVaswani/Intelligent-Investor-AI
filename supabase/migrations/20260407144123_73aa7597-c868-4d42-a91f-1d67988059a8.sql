@@ -1,0 +1,1 @@
+CREATE POLICY "Users can read own secrets" ON public.user_secrets FOR SELECT TO authenticated USING (auth.uid() = user_id);
