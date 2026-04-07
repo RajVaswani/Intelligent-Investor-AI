@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Target, TrendingUp, AlertTriangle, DollarSign, Percent, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Target, TrendingUp, AlertTriangle, DollarSign, Percent, ChevronDown, ChevronUp, Wifi } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Legend, ReferenceLine } from "recharts";
 import type { AnalysisResult } from "@/lib/stockData";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,9 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   const [showPlanner, setShowPlanner] = useState(false);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [_pricesLoading, setPricesLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
+  const tickRef = useRef(0);
 
   // Fetch live prices for all holdings every 1 second
   useEffect(() => {
@@ -61,6 +64,9 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
       if (!cancelled) {
         setLivePrices(prices);
         setPricesLoading(false);
+        setLastRefresh(new Date());
+        tickRef.current += 1;
+        setRefreshCount(tickRef.current);
       }
     };
     setPricesLoading(true);
@@ -219,6 +225,17 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
 
   return (
     <div className="space-y-4">
+      {/* Live Refresh Indicator */}
+      <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gain opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-gain"></span>
+        </span>
+        <Wifi className="h-3 w-3 text-gain" />
+        <span>Live · {Object.keys(livePrices).length} feeds · Refresh #{refreshCount}</span>
+        {lastRefresh && <span>· {lastRefresh.toLocaleTimeString()}</span>}
+      </div>
+
       {/* P&L Summary Bar */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
