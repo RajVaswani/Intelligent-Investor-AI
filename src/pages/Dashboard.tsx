@@ -126,6 +126,35 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [holdings, loadAnalyses]);
 
+  // Live price fetching every 1 second
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    let cancelled = false;
+    const fetchPrices = async () => {
+      const prices: Record<string, number> = {};
+      await Promise.all(
+        holdings.map(async (h) => {
+          try {
+            const yahooSymbol = h.exchange === "NSE" ? `${h.symbol}.NS` : h.symbol;
+            const { data, error } = await supabase.functions.invoke("stock-data", {
+              body: { symbol: yahooSymbol, range: "1d", interval: "1d" },
+            });
+            if (!error && data?.success && data.data?.regularMarketPrice) {
+              prices[h.symbol] = data.data.regularMarketPrice;
+            }
+          } catch { /* skip */ }
+        })
+      );
+      if (!cancelled) {
+        setLivePrices(prices);
+        priceTickRef.current += 1;
+      }
+    };
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 1000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [holdings]);
+
   const addHolding = async () => {
     if (!user || !newHolding.symbol || !newHolding.company_name) return;
     const { error } = await supabase.from("user_portfolios").insert({
