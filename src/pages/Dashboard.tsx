@@ -370,11 +370,16 @@ export default function Dashboard() {
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground">Portfolio Value</p>
-              <p className="text-2xl font-bold text-foreground">${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-2xl font-bold text-foreground">${totalMarketValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Avg AI Score</p>
-              <p className="text-2xl font-bold text-foreground">{avgScore || "—"}<span className="text-sm text-muted-foreground">/100</span></p>
+            <div className={`rounded-xl border p-4 ${totalPnL >= 0 ? "border-gain/20 bg-gain/5" : "border-loss/20 bg-loss/5"}`}>
+              <p className="text-xs text-muted-foreground">Unrealized P&L</p>
+              <p className={`text-2xl font-bold ${totalPnL >= 0 ? "text-gain" : "text-loss"}`}>
+                {totalPnL >= 0 ? "+" : ""}${Math.abs(totalPnL).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </p>
+              <p className={`text-xs ${totalPnLPct >= 0 ? "text-gain" : "text-loss"}`}>
+                {totalPnLPct >= 0 ? "+" : ""}{totalPnLPct.toFixed(1)}%
+              </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground">Sentiment</p>
