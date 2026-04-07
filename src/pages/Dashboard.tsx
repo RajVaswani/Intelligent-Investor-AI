@@ -412,7 +412,7 @@ export default function Dashboard() {
 
           {/* Aladdin-Inspired Risk Analytics */}
           {holdings.length > 0 && (
-            <RiskAnalytics holdings={holdings} analyses={analyses} livePrices={{}} />
+            <RiskAnalytics holdings={holdings} analyses={analyses} livePrices={livePrices} />
           )}
 
           {/* Add Holding Form */}
