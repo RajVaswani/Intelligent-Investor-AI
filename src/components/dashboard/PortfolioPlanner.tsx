@@ -37,10 +37,10 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [_pricesLoading, setPricesLoading] = useState(false);
 
-  // Fetch live prices for all holdings
+  // Fetch live prices for all holdings every 1 second
   useEffect(() => {
     if (holdings.length === 0) return;
-    setPricesLoading(true);
+    let cancelled = false;
     const fetchPrices = async () => {
       const prices: Record<string, number> = {};
       await Promise.all(
@@ -58,10 +58,15 @@ export function PortfolioPlanner({ holdings, analyses }: PortfolioPlannerProps) 
           }
         })
       );
-      setLivePrices(prices);
-      setPricesLoading(false);
+      if (!cancelled) {
+        setLivePrices(prices);
+        setPricesLoading(false);
+      }
     };
+    setPricesLoading(true);
     fetchPrices();
+    const interval = setInterval(fetchPrices, 1000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [holdings]);
 
   // Calculate P&L per holding using live market prices
