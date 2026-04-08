@@ -538,13 +538,13 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
     // Soft clamp: if predicted price breaks S/R, reduce confidence
     const breaksSR = predictedPrice > resistance * 1.005 || predictedPrice < support * 0.995;
     
-    const baseConfidence = 85;
-    const timeDecay = Math.max(0.3, 1 - (tf.seconds / 7200));
-    const volPenalty = Math.max(0.4, 1 - volatility * 50);
-    const analysisBonusConf = analysis ? 1.1 : 1;
-    const srPenalty = breaksSR ? 0.9 : 1.0;
-    const divPenalty = volumePriceDivergence ? 0.92 : 1.0;
-    const confidence = Math.min(95, Math.round(baseConfidence * timeDecay * volPenalty * analysisBonusConf * srPenalty * divPenalty));
+    const baseConfidence = 95;
+    const timeDecay = Math.max(0.7, 1 - (tf.seconds / 86400) * 0.15);
+    const volPenalty = Math.max(0.85, 1 - volatility * 10);
+    const analysisBonusConf = analysis ? 1.05 : 1;
+    const srPenalty = breaksSR ? 0.97 : 1.0;
+    const divPenalty = volumePriceDivergence ? 0.97 : 1.0;
+    const confidence = Math.min(99, Math.round(baseConfidence * timeDecay * volPenalty * analysisBonusConf * srPenalty * divPenalty));
 
     // Build detailed reasoning
     const parts: string[] = [];
