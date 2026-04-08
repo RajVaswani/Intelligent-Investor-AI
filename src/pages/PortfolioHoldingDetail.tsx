@@ -288,6 +288,7 @@ export default function PortfolioHoldingDetail() {
                 {/* Price Targets Grid */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
+                    { label: "1 Day", value: analysis.prediction.priceTarget1d },
                     { label: "1 Week", value: analysis.prediction.priceTarget1w },
                     { label: "1 Month", value: analysis.prediction.priceTarget1m },
                     { label: "3 Months", value: analysis.prediction.priceTarget3m },

@@ -242,6 +242,7 @@ Respond with this JSON structure ONLY:
 
   "strengths": ["<strength 1 with data>", "<strength 2>", "<strength 3>", "<strength 4>", "<strength 5>", "<strength 6>"],
   "risks": ["<risk 1 with data>", "<risk 2>", "<risk 3>", "<risk 4>", "<risk 5>", "<risk 6>"],
+  "priceTarget1d": <predicted price tomorrow / next trading day>,
   "priceTarget1w": <predicted price 1 week>,
   "priceTarget1m": <predicted price 1 month>,
   "priceTarget3m": <predicted price 3 months>,
@@ -313,6 +314,7 @@ Respond with this JSON structure ONLY:
         news_digest: analysis.newsDigest || '',
         strengths: analysis.strengths || [],
         risks: analysis.risks || [],
+        price_target_1d: analysis.priceTarget1d || null,
         price_target_1w: analysis.priceTarget1w || null,
         price_target_1m: analysis.priceTarget1m || null,
         price_target_3m: analysis.priceTarget3m || null,
