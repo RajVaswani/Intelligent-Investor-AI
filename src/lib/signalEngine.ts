@@ -515,24 +515,26 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
 
     // ATR-adjusted price projection (IB: use ATR for realistic price targets)
     // For longer timeframes (>1h), cap projected move to realistic daily range
-    let projectedMove = velocityPerSec * tf.seconds;
+    let projectedMove: number;
     const accelFactor = tf.seconds <= 180 ? momAcceleration / 100 * currentPrice * tf.seconds * 0.001 : 0;
-    const fundBias = (fundamentalScore - 50) / 50 * 0.001 * Math.min(tf.seconds, 3600) * (1 - tw);
     
-    // Cap max move: short TFs use velocity, long TFs use ATR-based realistic bounds
     if (tf.seconds > 3600) {
-      // For 24h: max move = ~1.5% based on ATR and score direction
-      const maxMovePercent = Math.min(0.015, atr / currentPrice * 3); // ATR-scaled, max 1.5%
+      // 24h prediction: use ATR-scaled move capped at 1.5%, driven by composite score direction
+      const maxMovePercent = Math.min(0.015, atr / currentPrice * 3);
       const direction = (compositeScore - 50) / 50; // -1 to +1
       projectedMove = currentPrice * maxMovePercent * direction;
     } else if (tf.seconds > 300) {
-      // For 10m-1h: clamp to 0.5% max
+      // 10m-1h: clamp velocity-based projection to 0.5% max
+      const rawMove = velocityPerSec * tf.seconds;
       const maxMove = currentPrice * 0.005;
-      projectedMove = Math.max(-maxMove, Math.min(maxMove, projectedMove));
+      projectedMove = Math.max(-maxMove, Math.min(maxMove, rawMove));
+    } else {
+      // Short TFs (<=5m): use velocity + acceleration
+      projectedMove = velocityPerSec * tf.seconds + accelFactor;
     }
     
     // Support/Resistance clamping (IB: prices tend to bounce off levels)
-    let predictedPrice = currentPrice + projectedMove + accelFactor + currentPrice * fundBias;
+    const predictedPrice = currentPrice + projectedMove;
     // Soft clamp: if predicted price breaks S/R, reduce confidence
     const breaksSR = predictedPrice > resistance * 1.005 || predictedPrice < support * 0.995;
     
