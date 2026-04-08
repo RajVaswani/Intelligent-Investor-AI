@@ -54,7 +54,26 @@ export default function Dashboard() {
   const loadHoldings = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from("user_portfolios").select("*").eq("user_id", user.id);
-    if (data) setHoldings(data as PortfolioHolding[]);
+    if (data) {
+      setHoldings(data as PortfolioHolding[]);
+      // Auto-seed SPY if not present
+      const hasSPY = data.some((h: any) => h.symbol === "SPY");
+      if (!hasSPY) {
+        const { data: inserted, error } = await supabase.from("user_portfolios").insert({
+          user_id: user.id,
+          symbol: "SPY",
+          company_name: "SPDR S&P 500 ETF Trust",
+          quantity: 10,
+          avg_price: 550,
+          sector: "ETF",
+          exchange: "NYSE",
+          currency: "USD",
+        }).select();
+        if (!error && inserted) {
+          setHoldings((prev) => [...prev, ...(inserted as PortfolioHolding[])]);
+        }
+      }
+    }
   }, [user]);
 
   const loadAnalyses = useCallback(async () => {
@@ -102,7 +121,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadHoldings();
-    // Secrets are write-only from client; we check if they exist via edge function
   }, [user, loadHoldings]);
 
   // Load cached analyses for holdings
