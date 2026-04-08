@@ -374,48 +374,105 @@ export function LivePredictions({ data, symbol, analysis, isIndian = false }: Pr
           Predictions by Timeframe
           {analysisInput && <span className="text-[10px] font-normal text-muted-foreground">(IB Academy Enhanced · 12 indicators · Recursive learning)</span>}
         </h3>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {signals.predictions.map((p) => {
-            const tfAccuracy = accuracyStats.byTimeframe[p.seconds];
-            return (
-              <div key={p.label} className={`rounded-xl border p-4 transition-all ${signalBg[p.signal]}`}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">{p.label}</span>
-                  <div className="flex items-center gap-1">
-                    {tfAccuracy && (
-                      <span className={`text-[9px] font-mono rounded px-1 py-0.5 ${tfAccuracy.accuracy >= 55 ? "bg-chart-2/20 text-chart-2" : tfAccuracy.accuracy <= 40 ? "bg-destructive/20 text-destructive" : "bg-muted text-muted-foreground"}`}>
-                        {tfAccuracy.accuracy.toFixed(0)}% acc
-                      </span>
-                    )}
-                    {signalIcon[p.signal]}
+        {/* Separate the 24h prediction as a featured card */}
+        {(() => {
+          const dayPred = signals.predictions.find(p => p.seconds === 86400);
+          const shortPreds = signals.predictions.filter(p => p.seconds !== 86400);
+          return (
+            <>
+              {dayPred && (
+                <div className={`mb-4 rounded-2xl border-2 p-5 ${signalBg[dayPred.signal]} relative overflow-hidden`}>
+                  <div className="absolute top-0 right-0 rounded-bl-xl bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary uppercase tracking-wider">
+                    24h Outlook
                   </div>
-                </div>
-                <div className={`text-xl font-bold ${signalColor[p.signal]}`}>{p.signal}</div>
-                <div className="mt-2 flex items-center justify-between text-xs">
-                  <span className="font-mono text-foreground">{curr}{p.predictedPrice.toFixed(2)}</span>
-                  <span className={p.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}>
-                    {p.predictedChange >= 0 ? "+" : ""}{p.predictedChange.toFixed(3)}%
-                  </span>
-                </div>
-                {/* Confidence bar */}
-                <div className="mt-2">
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Confidence</span>
-                    <span>{p.confidence}%</span>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-4">
+                      {signalIcon[dayPred.signal]}
+                      <div>
+                        <div className={`text-3xl font-bold ${signalColor[dayPred.signal]}`}>{dayPred.signal}</div>
+                        <div className="text-xs text-muted-foreground mt-1">24-Hour Prediction · Macro-Weighted · Recursive Learning</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <div className="text-[10px] uppercase text-muted-foreground">Target</div>
+                        <div className="text-xl font-bold font-mono text-foreground">{curr}{dayPred.predictedPrice.toFixed(2)}</div>
+                        <div className={`text-xs font-mono ${dayPred.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}`}>
+                          {dayPred.predictedChange >= 0 ? "+" : ""}{dayPred.predictedChange.toFixed(3)}%
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-[10px] uppercase text-muted-foreground">Confidence</div>
+                        <div className={`text-xl font-bold font-mono ${dayPred.confidence >= 70 ? "text-chart-2" : dayPred.confidence >= 40 ? "text-chart-4" : "text-destructive"}`}>
+                          {dayPred.confidence}%
+                        </div>
+                        <div className="mt-1 h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full ${dayPred.confidence >= 70 ? "bg-chart-2" : dayPred.confidence >= 40 ? "bg-chart-4" : "bg-destructive"}`}
+                            style={{ width: `${dayPred.confidence}%` }}
+                          />
+                        </div>
+                      </div>
+                      {(() => {
+                        const tfAcc = accuracyStats.byTimeframe[86400];
+                        return tfAcc ? (
+                          <div className="text-center">
+                            <div className="text-[10px] uppercase text-muted-foreground">Accuracy</div>
+                            <div className={`text-xl font-bold font-mono ${tfAcc.accuracy >= 55 ? "text-chart-2" : "text-destructive"}`}>
+                              {tfAcc.accuracy.toFixed(0)}%
+                            </div>
+                            <div className="text-[9px] text-muted-foreground">{tfAcc.total} predictions</div>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
-                  <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-chart-2" : p.confidence >= 40 ? "bg-chart-4" : "bg-destructive"}`}
-                      style={{ width: `${p.confidence}%` }}
-                    />
-                  </div>
+                  {dayPred.reasoning && <p className="mt-3 text-[10px] leading-snug text-muted-foreground border-t border-border/30 pt-2">{dayPred.reasoning}</p>}
                 </div>
-                {/* Reasoning */}
-                {p.reasoning && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{p.reasoning}</p>}
+              )}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {shortPreds.map((p) => {
+                  const tfAccuracy = accuracyStats.byTimeframe[p.seconds];
+                  return (
+                    <div key={p.label} className={`rounded-xl border p-4 transition-all ${signalBg[p.signal]}`}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">{p.label}</span>
+                        <div className="flex items-center gap-1">
+                          {tfAccuracy && (
+                            <span className={`text-[9px] font-mono rounded px-1 py-0.5 ${tfAccuracy.accuracy >= 55 ? "bg-chart-2/20 text-chart-2" : tfAccuracy.accuracy <= 40 ? "bg-destructive/20 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                              {tfAccuracy.accuracy.toFixed(0)}% acc
+                            </span>
+                          )}
+                          {signalIcon[p.signal]}
+                        </div>
+                      </div>
+                      <div className={`text-xl font-bold ${signalColor[p.signal]}`}>{p.signal}</div>
+                      <div className="mt-2 flex items-center justify-between text-xs">
+                        <span className="font-mono text-foreground">{curr}{p.predictedPrice.toFixed(2)}</span>
+                        <span className={p.predictedChange >= 0 ? "text-chart-2" : "text-destructive"}>
+                          {p.predictedChange >= 0 ? "+" : ""}{p.predictedChange.toFixed(3)}%
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                          <span>Confidence</span>
+                          <span>{p.confidence}%</span>
+                        </div>
+                        <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full transition-all ${p.confidence >= 70 ? "bg-chart-2" : p.confidence >= 40 ? "bg-chart-4" : "bg-destructive"}`}
+                            style={{ width: `${p.confidence}%` }}
+                          />
+                        </div>
+                      </div>
+                      {p.reasoning && <p className="mt-2 text-[10px] leading-snug text-muted-foreground">{p.reasoning}</p>}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* Macro/Micro Detail Cards */}
