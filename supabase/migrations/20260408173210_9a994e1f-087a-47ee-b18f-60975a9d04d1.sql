@@ -1,0 +1,1 @@
+ALTER TABLE public.stock_analyses ADD COLUMN IF NOT EXISTS price_target_1d numeric DEFAULT NULL;

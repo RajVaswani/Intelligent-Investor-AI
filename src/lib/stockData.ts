@@ -16,6 +16,7 @@ export interface Citation {
 }
 
 export interface PredictionData {
+  priceTarget1d: number | null;
   priceTarget1w: number | null;
   priceTarget1m: number | null;
   priceTarget3m: number | null;

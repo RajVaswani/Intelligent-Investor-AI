@@ -101,7 +101,7 @@ export default function Dashboard() {
         citations: raw.citations || [],
         lastUpdated: row.updated_at,
         prediction: {
-          priceTarget1w: row.price_target_1w, priceTarget1m: row.price_target_1m,
+          priceTarget1d: row.price_target_1d, priceTarget1w: row.price_target_1w, priceTarget1m: row.price_target_1m,
           priceTarget3m: row.price_target_3m, priceTarget1y: row.price_target_1y,
           recommendation: row.recommendation, confidenceScore: row.confidence_score,
           predictionReasoning: row.prediction_reasoning || "",

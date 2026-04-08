@@ -53,6 +53,7 @@ export type Database = {
           news_digest: string | null
           overall_score: number
           prediction_reasoning: string | null
+          price_target_1d: number | null
           price_target_1m: number | null
           price_target_1w: number | null
           price_target_1y: number | null
@@ -84,6 +85,7 @@ export type Database = {
           news_digest?: string | null
           overall_score: number
           prediction_reasoning?: string | null
+          price_target_1d?: number | null
           price_target_1m?: number | null
           price_target_1w?: number | null
           price_target_1y?: number | null
@@ -115,6 +117,7 @@ export type Database = {
           news_digest?: string | null
           overall_score?: number
           prediction_reasoning?: string | null
+          price_target_1d?: number | null
           price_target_1m?: number | null
           price_target_1w?: number | null
           price_target_1y?: number | null
