@@ -45,6 +45,7 @@ export async function analyzeCompany(company: Company): Promise<AnalysisResult> 
     lastUpdated: d.lastUpdated || new Date().toISOString(),
     stockSplitCaveat: d.stockSplitCaveat || null,
     prediction: {
+      priceTarget1d: d.priceTarget1d || null,
       priceTarget1w: d.priceTarget1w || null,
       priceTarget1m: d.priceTarget1m || null,
       priceTarget3m: d.priceTarget3m || null,
@@ -93,6 +94,7 @@ export async function getCachedAnalyses(etf: string): Promise<AnalysisResult[]> 
       stockSplitCaveat: raw.stockSplitCaveat || null,
       lastUpdated: row.updated_at,
       prediction: {
+        priceTarget1d: (row as any).price_target_1d || null,
         priceTarget1w: (row as any).price_target_1w || null,
         priceTarget1m: (row as any).price_target_1m || null,
         priceTarget3m: (row as any).price_target_3m || null,
@@ -143,6 +145,7 @@ export async function getCachedAnalysis(symbol: string): Promise<AnalysisResult 
     stockSplitCaveat: raw.stockSplitCaveat || null,
     lastUpdated: data.updated_at,
     prediction: {
+      priceTarget1d: (data as any).price_target_1d || null,
       priceTarget1w: (data as any).price_target_1w || null,
       priceTarget1m: (data as any).price_target_1m || null,
       priceTarget3m: (data as any).price_target_3m || null,
