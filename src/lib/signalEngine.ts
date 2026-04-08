@@ -480,6 +480,7 @@ export function computeLiveSignals(candles: IntradayCandle[], analysis?: Analysi
     { label: "10 min", seconds: 600, techWeight: Math.max(0.35, 1 - fundW * 1.0) },
     { label: "30 min", seconds: 1800, techWeight: Math.max(0.25, 1 - fundW * 1.5) },
     { label: "1 hour", seconds: 3600, techWeight: Math.max(0.15, 1 - fundW * 1.8) },
+    { label: "24 hours", seconds: 86400, techWeight: Math.max(0.05, 1 - fundW * 2.0) },
   ];
 
   const candleIntervalSec = candles.length > 1 ? (candles[candles.length - 1].time - candles[candles.length - 2].time) / 1000 : 60;
