@@ -81,7 +81,7 @@ export interface LearningState {
 }
 
 const STORAGE_KEY = "signal_learning_state";
-const MAX_PREDICTIONS = 500; // keep last 500 predictions
+const MAX_PREDICTIONS = 200; // keep last 200 predictions (reduced to avoid localStorage quota)
 
 function defaultWeights(): IndicatorAccuracy {
   return { rsi: 0.25, ema: 0.25, vwap: 0.20, momentum: 0.20, volume: 0.10, fundamental: 0.40 };
@@ -136,6 +136,21 @@ export function recordPrediction(
     predictedPrice > currentPrice * 1.0001 ? "up" :
     predictedPrice < currentPrice * 0.9999 ? "down" : "flat";
 
+  // Store prediction without full context to save localStorage space
+  const compactContext = context ? {
+    rsi: context.rsi, stochRsi: context.stochRsi, emaAlignment: context.emaAlignment,
+    macdHistogram: context.macdHistogram, bollingerPosition: context.bollingerPosition,
+    technicalScore: context.technicalScore, fundamentalScore: context.fundamentalScore,
+    compositeScore: context.compositeScore, techWeight: context.techWeight,
+    sentiment: context.sentiment, overallAIScore: context.overallAIScore,
+    recommendation: context.recommendation, reasoning: context.reasoning,
+    weights: context.weights, trend: context.trend, volumeTrend: context.volumeTrend,
+    volatilityRegime: context.volatilityRegime, momentum: context.momentum,
+    atr: context.atr, support: context.support, resistance: context.resistance,
+    vwap: context.vwap, macdCrossover: context.macdCrossover,
+    volumePriceDivergence: context.volumePriceDivergence,
+  } as PredictionContext : undefined;
+
   state.predictions.push({
     timestamp: Date.now(),
     symbol,
@@ -143,7 +158,7 @@ export function recordPrediction(
     predictedPrice,
     actualPriceAtPrediction: currentPrice,
     predictedDirection,
-    context,
+    context: compactContext,
   });
 
   saveState(symbol, state);
