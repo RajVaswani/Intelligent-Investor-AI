@@ -71,7 +71,7 @@ const factorIcons: Record<string, React.ReactNode> = {
 };
 
 const tfLabelMap: Record<number, string> = {
-  30: "30s", 60: "1m", 180: "3m", 300: "5m", 600: "10m", 1800: "30m", 3600: "1h",
+  30: "30s", 60: "1m", 180: "3m", 300: "5m", 600: "10m", 1800: "30m", 3600: "1h", 86400: "24h",
 };
 
 export function LivePredictions({ data, symbol, analysis, isIndian = false }: Props) {
