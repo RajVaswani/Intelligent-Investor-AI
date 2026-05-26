@@ -92,13 +92,8 @@ export default function Auth() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
             <Activity className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-foreground">
-            {isLogin ? "Welcome back" : "Create your account"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isLogin ? "Sign in to access your portfolio dashboard" : "Start analyzing your portfolio with AI"}
-          </p>
-        </div>
+
+
 
           <h1 className="mt-4 text-2xl font-bold text-foreground">
             {isForgot ? "Reset your password" : isLogin ? "Welcome back" : "Create your account"}
