@@ -9,6 +9,7 @@ import { Activity, Mail, Lock, User, ArrowLeft } from "lucide-react";
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") !== "signup");
+  const [isForgot, setIsForgot] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -20,6 +21,7 @@ export default function Auth() {
   useEffect(() => {
     if (!authLoading && user) navigate("/market", { replace: true });
   }, [user, authLoading, navigate]);
+
 
 
 
