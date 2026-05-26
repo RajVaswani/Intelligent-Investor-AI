@@ -8,6 +8,7 @@ import Landing from "./pages/Landing";
 import Market from "./pages/Market";
 import StockDetail from "./pages/StockDetail";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
 import PortfolioHoldingDetail from "./pages/PortfolioHoldingDetail";
